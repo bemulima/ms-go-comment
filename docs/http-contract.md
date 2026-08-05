@@ -167,8 +167,15 @@ contain `status` plus `policy_overrides`; every override field is nullable and a
 null/missing field inherits the current space policy. Responses expose the
 effective policy. A successful thread update increments its durable sequence and
 atomically emits `comment.thread.updated` with status and effective policy.
-Comment hide/restore routes and their permission matrix remain deferred to the
-moderation slice.
+Comment hide/restore routes are implemented for both `ADMIN` and `MODERATOR`;
+all other roles receive `comment_forbidden`. They accept no request body. Hide
+transitions active comments to hidden and restore transitions hidden comments
+to active; repeating the achieved state is idempotent, while deleted comments
+return `comment_moderation_conflict`. The transition increments comment version
+and thread sequence and atomically emits `comment.hidden` or `comment.restored`.
+Hidden content and attachments remain stored but are excluded from regular user
+reads and signed URLs. Change reconciliation includes a redacted hidden
+tombstone so clients can advance through the moderation sequence.
 
 ## Internal API
 

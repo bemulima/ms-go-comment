@@ -25,12 +25,22 @@ comment.attachment.failed
 comment.thread.updated
 ```
 
-All lifecycle payloads include `schema_version`, `event_id`, `occurred_at`, `thread_id`, and `sequence`. Comment payloads also include comment, parent/root, actor/author, lifecycle status, version, safe content, and attachment projections required by the WebSocket client.
+All lifecycle payloads include `schema_version`, `event_id`, `occurred_at`,
+`thread_id`, and `sequence`. Comment payloads include comment, parent/root,
+actor/author, lifecycle status, and version. Content and attachment projections
+are included when visible; the moderation redaction below is the explicit
+exception.
 
 An admin thread status/policy change increments the same thread sequence and
 inserts `comment.thread.updated` in the configuration transaction. Its payload
 contains the new status and effective policy, so connected clients can update
 their controls without reconnecting.
+
+A moderation transition uses the same sequencing and outbox boundary.
+`comment.hidden` contains identifiers, status, version, and counters but omits
+the hidden body, links, and attachments. `comment.restored` contains the restored
+safe content and attachment projection. REST reconciliation represents hidden
+state as a redacted tombstone rather than dropping its sequence.
 
 ## Fan-out
 

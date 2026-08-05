@@ -25,6 +25,14 @@ Recommended first-slice defaults are: links enabled, images disabled, maximum de
 - Reads paginate roots or direct children. Clients construct the visible tree lazily instead of requesting an unbounded recursive response.
 - Soft deletion produces a tombstone and preserves the row, identity, path, counters, and descendants.
 
+## Moderation
+
+- `ADMIN` and `MODERATOR` may invoke the explicit hide/restore routes; all other roles are denied.
+- Hide changes only `active` to `hidden`; restore changes only `hidden` to `active`. Repeating the achieved state is idempotent.
+- Deleted comments cannot be hidden or restored. Hiding preserves content, attachments, placement, and counters in storage.
+- Regular reads and attachment signed URLs never expose hidden content. Change reconciliation returns only a redacted hidden tombstone with identity, status, version, and sequence.
+- Every actual transition increments comment version and thread sequence and inserts its lifecycle event in the same transaction.
+
 ## Content
 
 - A comment must contain non-blank text or at least one valid attachment.

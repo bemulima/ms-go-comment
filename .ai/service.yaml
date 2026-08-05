@@ -62,6 +62,11 @@ capabilities:
       confidence: 0.98
       source_path: internal/adapters/http/handlers/admin.go
       explanation: ADMIN owns configuration writes while ADMIN and MODERATOR may inspect spaces and threads.
+    - name: comment_moderation_rest
+      value: Transactional hide and restore with redacted recovery state
+      confidence: 0.98
+      source_path: internal/usecase/admin/service.go
+      explanation: ADMIN and MODERATOR may hide or restore comments; every transition is sequenced and emitted through the outbox.
     - name: attachment_lifecycle
       value: Validated temporary image upload, activation, signed GET, and asynchronous deletion
       confidence: 0.98
