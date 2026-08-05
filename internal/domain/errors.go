@@ -23,6 +23,7 @@ var (
 	ErrForbidden              = errors.New("comment operation forbidden")
 	ErrThreadNotWritable      = errors.New("thread is not writable")
 	ErrEditConflict           = errors.New("comment edit conflict")
+	ErrModerationConflict     = errors.New("comment moderation conflict")
 	ErrIdempotencyConflict    = errors.New("idempotency key conflict")
 	ErrSpaceNotFound          = errors.New("space not found")
 	ErrThreadNotFound         = errors.New("thread not found")
