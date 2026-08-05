@@ -184,6 +184,83 @@ func TestService_AccessAndWritableState(t *testing.T) {
 	}
 }
 
+func TestService_ReadListAndReconcileViews(t *testing.T) {
+	t.Parallel()
+
+	service, store, actor, thread := newFixture()
+	rootID := uuid.New()
+	root := activeComment(rootID, thread.ID, actor.UserID, service.Now())
+	root.Sequence = 1
+	childID := uuid.New()
+	child := activeComment(childID, thread.ID, actor.UserID, service.Now().Add(time.Second))
+	child.ParentID = &rootID
+	child.RootID = rootID
+	child.Path = []uuid.UUID{rootID, childID}
+	child.Depth = 1
+	child.Sequence = 2
+	hiddenID := uuid.New()
+	hidden := activeComment(hiddenID, thread.ID, actor.UserID, service.Now().Add(2*time.Second))
+	hidden.Status = domain.CommentStatusHidden
+	hidden.Sequence = 3
+	store.comments[rootID], store.comments[childID], store.comments[hiddenID] = root, child, hidden
+	store.threads[thread.ID] = withSequence(thread, 3)
+	attachmentID := uuid.New()
+	store.attachments[attachmentID] = domain.Attachment{
+		ID: attachmentID, ThreadID: thread.ID, CommentID: &rootID, UploaderID: actor.UserID,
+		FileStorageID: uuid.New(), Status: domain.AttachmentStatusReady, MIMEType: "image/png",
+		SizeBytes: 64, Width: 2, Height: 2, OriginalFilename: "proof.png",
+		ExpiresAt: service.Now().Add(time.Hour), CreatedAt: service.Now(), UpdatedAt: service.Now(),
+	}
+
+	threadView, err := service.GetThread(context.Background(), actor, thread.ID)
+	if err != nil || threadView.Thread.LastSequence != 3 || threadView.Policy.MaxDepth != domain.DefaultPolicy().MaxDepth {
+		t.Fatalf("GetThread() = %#v, error=%v", threadView, err)
+	}
+	commentView, err := service.GetComment(context.Background(), actor, rootID)
+	if err != nil || len(commentView.Attachments) != 1 || commentView.Attachments[0].ID != attachmentID {
+		t.Fatalf("GetComment() = %#v, error=%v", commentView, err)
+	}
+	roots, err := service.ListComments(context.Background(), actor, repository.CommentListQuery{ThreadID: thread.ID, Limit: 20})
+	if err != nil || len(roots) != 1 || roots[0].Comment.ID != rootID {
+		t.Fatalf("ListComments(roots) = %#v, error=%v", roots, err)
+	}
+	children, err := service.ListComments(context.Background(), actor, repository.CommentListQuery{ThreadID: thread.ID, ParentID: &rootID, Limit: 20})
+	if err != nil || len(children) != 1 || children[0].Comment.ID != childID {
+		t.Fatalf("ListComments(children) = %#v, error=%v", children, err)
+	}
+	changes, err := service.ListChanges(context.Background(), actor, repository.CommentChangeQuery{ThreadID: thread.ID, AfterSequence: 1, Limit: 20})
+	if err != nil || len(changes) != 1 || changes[0].Comment.ID != childID {
+		t.Fatalf("ListChanges() = %#v, error=%v", changes, err)
+	}
+}
+
+func TestService_ReadValidationAndVisibilityErrors(t *testing.T) {
+	t.Parallel()
+
+	service, store, actor, thread := newFixture()
+	hiddenID := uuid.New()
+	hidden := activeComment(hiddenID, thread.ID, actor.UserID, service.Now())
+	hidden.Status = domain.CommentStatusHidden
+	store.comments[hiddenID] = hidden
+
+	if _, err := service.GetComment(context.Background(), actor, uuid.New()); !errors.Is(err, domain.ErrCommentNotFound) {
+		t.Fatalf("missing comment error = %v", err)
+	}
+	if _, err := service.GetComment(context.Background(), actor, hiddenID); !errors.Is(err, domain.ErrCommentNotFound) {
+		t.Fatalf("hidden comment error = %v", err)
+	}
+	if _, err := service.ListComments(context.Background(), actor, repository.CommentListQuery{ThreadID: thread.ID}); !errors.Is(err, domain.ErrValidation) {
+		t.Fatalf("invalid list limit error = %v", err)
+	}
+	if _, err := service.ListChanges(context.Background(), actor, repository.CommentChangeQuery{ThreadID: thread.ID, AfterSequence: -1, Limit: 20}); !errors.Is(err, domain.ErrValidation) {
+		t.Fatalf("invalid changes cursor error = %v", err)
+	}
+	foreignParent := uuid.New()
+	if _, err := service.ListComments(context.Background(), actor, repository.CommentListQuery{ThreadID: thread.ID, ParentID: &foreignParent, Limit: 20}); !errors.Is(err, domain.ErrParentNotFound) {
+		t.Fatalf("foreign parent error = %v", err)
+	}
+}
+
 type fakeStore struct {
 	spaces      map[uuid.UUID]domain.Space
 	spaceKeys   map[string]uuid.UUID

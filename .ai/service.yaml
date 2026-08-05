@@ -42,11 +42,11 @@ capabilities:
       confidence: 0.98
       source_path: internal/adapters/http/router.go
       explanation: The bootstrap router exposes the process health contract.
-    - name: planned_business_capability
+    - name: authenticated_discussion_tree
       value: Multi-level authenticated resource discussions
       confidence: 0.95
       source_path: internal/domain/comment.go
-      explanation: Domain placement and content rules implement the backend model independently of adapters.
+      explanation: Domain placement, policy, idempotency and optimistic locking implement the backend model independently of adapters.
     - name: persistence_contract
       value: PostgreSQL schema and clean repository ports
       confidence: 0.98
@@ -102,6 +102,7 @@ instructions:
     - AGENTS.md
     - prompts/git-workflow.md
     - docs/domain-map.md
+    - docs/agent-contract-map.md
 commands:
     - format
     - dependencies

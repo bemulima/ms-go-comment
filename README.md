@@ -4,7 +4,15 @@
 
 ## Status
 
-The repository is in the backend foundation phase. The versioned design map is in [docs/domain-map.md](docs/domain-map.md). PostgreSQL persistence, authenticated thread/comment REST, validated FileStorage attachments, transactional outbox delivery through NATS JetStream, single-use realtime tickets, and the thread-scoped WebSocket v1 projection are implemented.
+The first authenticated discussion and realtime backend slice is complete.
+PostgreSQL persistence, thread/comment REST, validated FileStorage attachments,
+transactional outbox delivery through NATS JetStream, single-use realtime
+tickets, and the thread-scoped WebSocket projection are implemented. Start with the
+[domain map](docs/domain-map.md) and the final
+[agent contract map](docs/agent-contract-map.md).
+
+Space administration/moderation under `/admin/v1` and private-resource grants
+under `/internal/v1` remain designed contracts, not registered runtime routes.
 
 ## Architecture
 
