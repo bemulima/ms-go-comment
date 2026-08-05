@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	filestorageadapter "github.com/bemulima/ms-go-comment/internal/adapters/filestorage"
 	httpadapter "github.com/bemulima/ms-go-comment/internal/adapters/http"
 	pgadapter "github.com/bemulima/ms-go-comment/internal/adapters/postgres"
 	"github.com/bemulima/ms-go-comment/internal/config"
@@ -40,9 +41,13 @@ func main() {
 	comments := pgadapter.CommentRepository{Pool: pool}
 	attachments := pgadapter.AttachmentRepository{Pool: pool}
 	outbox := pgadapter.OutboxRepository{Pool: pool}
+	fileStorage := filestorageadapter.Client{BaseURL: cfg.FileStorageServiceBaseURL}
 	commentService := &commentuc.Service{
 		Spaces: spaces, Threads: threads, Comments: comments, Attachments: attachments,
-		Outbox: outbox, Tx: pgadapter.TransactionManager{Pool: pool},
+		Outbox: outbox, Tx: pgadapter.TransactionManager{Pool: pool}, Files: fileStorage,
+		AttachmentTTLMinutes:  cfg.AttachmentTTLMinutes,
+		SignedURLMinutes:      cfg.AttachmentSignedURLMinutes,
+		ActivationMaxAttempts: cfg.AttachmentActivationAttempts,
 	}
 
 	server := &http.Server{
@@ -53,6 +58,7 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	go runAttachmentWorker(ctx, logger, commentService, time.Duration(cfg.AttachmentWorkerInterval)*time.Second, cfg.AttachmentWorkerBatch)
 
 	serverErrors := make(chan error, 1)
 	go func() {
@@ -74,5 +80,32 @@ func main() {
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("shutdown error", zap.Error(err))
+	}
+}
+
+func runAttachmentWorker(ctx context.Context, logger *zap.Logger, service *commentuc.Service, interval time.Duration, batch int) {
+	if interval <= 0 {
+		interval = 5 * time.Second
+	}
+	if batch <= 0 {
+		batch = 50
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			result, err := service.ProcessAttachmentWork(ctx, batch)
+			if err != nil {
+				logger.Error("attachment worker cycle failed", zap.Error(err))
+				continue
+			}
+			if result.Activated+result.Failed+result.Deleted > 0 {
+				logger.Info("attachment worker cycle completed",
+					zap.Int("activated", result.Activated), zap.Int("failed", result.Failed), zap.Int("deleted", result.Deleted))
+			}
+		}
 	}
 }

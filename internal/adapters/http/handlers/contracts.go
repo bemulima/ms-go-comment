@@ -18,4 +18,7 @@ type CommentService interface {
 	CreateComment(context.Context, domain.Actor, commentuc.CreateCommentInput) (commentuc.CreateCommentResult, error)
 	UpdateComment(context.Context, domain.Actor, commentuc.UpdateCommentInput) (commentuc.CommentView, error)
 	DeleteComment(context.Context, domain.Actor, commentuc.DeleteCommentInput) (commentuc.CommentView, error)
+	UploadAttachment(context.Context, domain.Actor, commentuc.UploadAttachmentInput) (domain.Attachment, error)
+	GetAttachmentSignedURL(context.Context, domain.Actor, uuid.UUID) (commentuc.SignedFileURL, error)
+	DeleteAttachment(context.Context, domain.Actor, uuid.UUID) (domain.Attachment, error)
 }

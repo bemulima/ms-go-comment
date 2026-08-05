@@ -33,6 +33,10 @@ func errorContract(err error) (int, string, string) {
 		return http.StatusNotFound, "thread_not_found", "comment thread was not found"
 	case errors.Is(err, domain.ErrCommentNotFound):
 		return http.StatusNotFound, "comment_not_found", "comment was not found"
+	case errors.Is(err, domain.ErrAttachmentNotFound):
+		return http.StatusNotFound, "attachment_not_found", "comment attachment was not found"
+	case errors.Is(err, domain.ErrAttachmentNotReady):
+		return http.StatusConflict, "attachment_not_ready", "comment attachment is not ready"
 	case errors.Is(err, domain.ErrThreadNotWritable):
 		return http.StatusConflict, "thread_not_writable", "comment thread is not writable"
 	case errors.Is(err, domain.ErrEditConflict):

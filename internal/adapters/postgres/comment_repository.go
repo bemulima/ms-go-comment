@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/bemulima/ms-go-comment/internal/domain"
 	"github.com/bemulima/ms-go-comment/internal/domain/repository"
@@ -126,6 +127,12 @@ WHERE thread_id=$1 AND id=$2`, threadID, commentID)
 		return domain.ErrNotFound
 	}
 	return nil
+}
+
+func (r CommentRepository) AdvanceSequence(ctx context.Context, commentID uuid.UUID, sequence int64, updatedAt time.Time) (domain.Comment, error) {
+	return scanComment(runner(ctx, r.Pool).QueryRow(ctx, `UPDATE comment SET
+sequence=$2, version=version+1, updated_at=$3 WHERE id=$1 RETURNING `+commentColumns,
+		commentID, sequence, updatedAt))
 }
 
 var _ repository.CommentRepository = (*CommentRepository)(nil)

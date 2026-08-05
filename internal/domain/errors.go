@@ -28,4 +28,6 @@ var (
 	ErrThreadNotFound         = errors.New("thread not found")
 	ErrCommentNotFound        = errors.New("comment not found")
 	ErrParentNotFound         = errors.New("parent not found")
+	ErrAttachmentNotFound     = errors.New("attachment not found")
+	ErrAttachmentNotReady     = errors.New("attachment is not ready")
 )

@@ -1,7 +1,9 @@
 package http
 
 import (
+	"bytes"
 	"context"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,6 +34,9 @@ func TestRouter_BusinessRoutesRequireGatewayActor(t *testing.T) {
 		{name: "create", method: http.MethodPost, path: "/api/v1/comment/create", body: `{}`},
 		{name: "update", method: http.MethodPut, path: "/api/v1/comment/update/" + uuid.NewString(), body: `{}`},
 		{name: "delete", method: http.MethodDelete, path: "/api/v1/comment/delete/" + uuid.NewString(), body: `{}`},
+		{name: "attachment upload", method: http.MethodPost, path: "/api/v1/comment-attachment/upload"},
+		{name: "attachment signed URL", method: http.MethodGet, path: "/api/v1/comment-attachment/signed-url/" + uuid.NewString()},
+		{name: "attachment delete", method: http.MethodDelete, path: "/api/v1/comment-attachment/delete/" + uuid.NewString()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -42,6 +47,37 @@ func TestRouter_BusinessRoutesRequireGatewayActor(t *testing.T) {
 				t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 			}
 		})
+	}
+}
+
+func TestRouter_UploadAttachmentParsesMultipart(t *testing.T) {
+	t.Parallel()
+
+	threadID := uuid.New()
+	attachmentID := uuid.New()
+	called := false
+	service := &stubCommentService{uploadAttachment: func(_ context.Context, _ domain.Actor, input commentuc.UploadAttachmentInput) (domain.Attachment, error) {
+		called = true
+		if input.ThreadID != threadID || input.Filename != "image.png" || string(input.Data) != "image-data" {
+			t.Fatalf("upload input = %#v", input)
+		}
+		return domain.Attachment{ID: attachmentID, Status: domain.AttachmentStatusPending}, nil
+	}}
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	_ = writer.WriteField("thread_id", threadID.String())
+	part, err := writer.CreateFormFile("file", "image.png")
+	if err != nil {
+		t.Fatalf("create multipart file: %v", err)
+	}
+	_, _ = part.Write([]byte("image-data"))
+	_ = writer.Close()
+	request := authenticatedRequest(http.MethodPost, "/api/v1/comment-attachment/upload", body.String())
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	response := httptest.NewRecorder()
+	NewRouter(RouterDependencies{CommentService: service}).ServeHTTP(response, request)
+	if response.Code != http.StatusCreated || !called || !strings.Contains(response.Body.String(), attachmentID.String()) {
+		t.Fatalf("status=%d called=%v body=%s", response.Code, called, response.Body.String())
 	}
 }
 
@@ -101,7 +137,8 @@ func authenticatedRequest(method, path, body string) *http.Request {
 }
 
 type stubCommentService struct {
-	create func(context.Context, domain.Actor, commentuc.CreateCommentInput) (commentuc.CreateCommentResult, error)
+	create           func(context.Context, domain.Actor, commentuc.CreateCommentInput) (commentuc.CreateCommentResult, error)
+	uploadAttachment func(context.Context, domain.Actor, commentuc.UploadAttachmentInput) (domain.Attachment, error)
 }
 
 func (s *stubCommentService) EnsureThread(context.Context, domain.Actor, commentuc.EnsureThreadInput) (commentuc.ThreadView, error) {
@@ -130,4 +167,17 @@ func (s *stubCommentService) UpdateComment(context.Context, domain.Actor, commen
 }
 func (s *stubCommentService) DeleteComment(context.Context, domain.Actor, commentuc.DeleteCommentInput) (commentuc.CommentView, error) {
 	return commentuc.CommentView{}, nil
+}
+
+func (s *stubCommentService) UploadAttachment(ctx context.Context, actor domain.Actor, input commentuc.UploadAttachmentInput) (domain.Attachment, error) {
+	if s.uploadAttachment != nil {
+		return s.uploadAttachment(ctx, actor, input)
+	}
+	return domain.Attachment{}, nil
+}
+func (s *stubCommentService) GetAttachmentSignedURL(context.Context, domain.Actor, uuid.UUID) (commentuc.SignedFileURL, error) {
+	return commentuc.SignedFileURL{}, nil
+}
+func (s *stubCommentService) DeleteAttachment(context.Context, domain.Actor, uuid.UUID) (domain.Attachment, error) {
+	return domain.Attachment{}, nil
 }

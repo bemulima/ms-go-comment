@@ -18,14 +18,18 @@ const (
 )
 
 type Service struct {
-	Spaces      repository.SpaceRepository
-	Threads     repository.ThreadRepository
-	Comments    repository.CommentRepository
-	Attachments repository.AttachmentRepository
-	Outbox      repository.OutboxRepository
-	Tx          repository.TransactionManager
-	Now         func() time.Time
-	NewID       func() uuid.UUID
+	Spaces                repository.SpaceRepository
+	Threads               repository.ThreadRepository
+	Comments              repository.CommentRepository
+	Attachments           repository.AttachmentRepository
+	Outbox                repository.OutboxRepository
+	Tx                    repository.TransactionManager
+	Now                   func() time.Time
+	NewID                 func() uuid.UUID
+	Files                 FileStorage
+	AttachmentTTLMinutes  int
+	SignedURLMinutes      int
+	ActivationMaxAttempts int
 }
 
 type EnsureThreadInput struct {
@@ -303,7 +307,16 @@ func (s Service) DeleteComment(ctx context.Context, actor domain.Actor, in Delet
 		if err != nil {
 			return err
 		}
-		if err := s.addOutbox(txCtx, item, attachments, domain.EventCommentDeleted, actor.UserID, now); err != nil {
+		for index := range attachments {
+			attachments[index].Status = domain.AttachmentStatusDeleted
+			attachments[index].DeletedAt = &now
+			attachments[index].DeleteNextAttemptAt = &now
+			attachments[index].UpdatedAt = now
+			if err := s.Attachments.UpdateStatus(txCtx, attachments[index]); err != nil {
+				return err
+			}
+		}
+		if err := s.addOutbox(txCtx, item, nil, domain.EventCommentDeleted, actor.UserID, now); err != nil {
 			return err
 		}
 		result = CommentView{Comment: item, Attachments: attachments}

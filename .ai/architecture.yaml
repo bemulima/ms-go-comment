@@ -68,8 +68,10 @@ domain_sources:
 implemented_adapters:
     http: internal/adapters/http
     postgres: internal/adapters/postgres
+    filestorage: internal/adapters/filestorage
 implemented_usecases:
     thread_and_comment: internal/usecase/comment/service.go
+    attachment_lifecycle: internal/usecase/comment/attachment_service.go
 external_ownership:
     - name: user_identity_and_profile
       owner: ms-go-auth/ms-go-user

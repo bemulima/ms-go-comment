@@ -52,6 +52,11 @@ capabilities:
       confidence: 0.98
       source_path: internal/adapters/http/router.go
       explanation: Authenticated routes call transaction-scoped comment use cases backed by pgx repositories.
+    - name: attachment_lifecycle
+      value: Validated temporary image upload, activation, signed GET, and asynchronous deletion
+      confidence: 0.98
+      source_path: internal/usecase/comment/attachment_service.go
+      explanation: Comment owns authorization and metadata while FileStorage owns bytes.
     - name: planned_business_capability
       value: Ticket-authenticated realtime WebSocket projection
       confidence: 0.95

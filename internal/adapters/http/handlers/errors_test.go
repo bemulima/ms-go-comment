@@ -22,6 +22,8 @@ func TestErrorContract(t *testing.T) {
 		{name: "edit", err: domain.ErrEditConflict, status: http.StatusConflict, code: "comment_edit_conflict"},
 		{name: "parent", err: domain.ErrParentNotFound, status: http.StatusUnprocessableEntity, code: "parent_not_found"},
 		{name: "content", err: domain.ErrInvalidCommentContent, status: http.StatusUnprocessableEntity, code: "invalid_comment_content"},
+		{name: "attachment missing", err: domain.ErrAttachmentNotFound, status: http.StatusNotFound, code: "attachment_not_found"},
+		{name: "attachment processing", err: domain.ErrAttachmentNotReady, status: http.StatusConflict, code: "attachment_not_ready"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

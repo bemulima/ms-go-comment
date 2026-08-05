@@ -20,6 +20,8 @@ Initial stable codes include:
 | `space_not_found` | 404 | Space does not exist or is unavailable |
 | `thread_not_found` | 404 | Thread does not exist or is unavailable |
 | `comment_not_found` | 404 | Comment does not exist or is unavailable |
+| `attachment_not_found` | 404 | Attachment does not exist or is unavailable |
+| `attachment_not_ready` | 409 | Attachment cannot receive a signed URL yet |
 | `thread_not_writable` | 409 | Thread is read-only/closed/hidden |
 | `comment_edit_conflict` | 409 | Expected version is stale |
 | `idempotency_conflict` | 409 | Key was reused with different input |

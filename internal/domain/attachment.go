@@ -23,22 +23,28 @@ func (s AttachmentStatus) Valid() bool {
 }
 
 type Attachment struct {
-	ID               uuid.UUID
-	ThreadID         uuid.UUID
-	CommentID        *uuid.UUID
-	UploaderID       uuid.UUID
-	FileStorageID    uuid.UUID
-	Status           AttachmentStatus
-	MIMEType         string
-	SizeBytes        int64
-	Width            int
-	Height           int
-	OriginalFilename string
-	ExpiresAt        time.Time
-	ActivatedAt      *time.Time
-	DeletedAt        *time.Time
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                      uuid.UUID
+	ThreadID                uuid.UUID
+	CommentID               *uuid.UUID
+	UploaderID              uuid.UUID
+	FileStorageID           uuid.UUID
+	Status                  AttachmentStatus
+	MIMEType                string
+	SizeBytes               int64
+	Width                   int
+	Height                  int
+	OriginalFilename        string
+	ExpiresAt               time.Time
+	ActivatedAt             *time.Time
+	DeletedAt               *time.Time
+	ActivationAttempts      int
+	ActivationNextAttemptAt *time.Time
+	DeleteAttempts          int
+	DeleteNextAttemptAt     *time.Time
+	LastError               string
+	StorageDeletedAt        *time.Time
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 }
 
 func (a Attachment) Validate(policy Policy) error {
@@ -74,6 +80,9 @@ func (a Attachment) Validate(policy Policy) error {
 	}
 	if a.Status == AttachmentStatusDeleted && a.DeletedAt == nil {
 		return fmt.Errorf("%w: deleted attachment requires deletion time", ErrInvalidAttachment)
+	}
+	if a.ActivationAttempts < 0 || a.DeleteAttempts < 0 {
+		return fmt.Errorf("%w: delivery attempts must be non-negative", ErrInvalidAttachment)
 	}
 	return nil
 }

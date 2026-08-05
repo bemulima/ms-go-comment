@@ -1,5 +1,5 @@
 schema_version: 1
-status: thread_and_comment_routes_implemented
+status: thread_comment_and_attachment_routes_implemented
 source_of_truth: docs/http-contract.md
 route_groups:
     - prefix: /api/v1
@@ -46,11 +46,16 @@ implemented_routes:
     - POST /api/v1/comment/create
     - PUT /api/v1/comment/update/{commentID}
     - DELETE /api/v1/comment/delete/{commentID}
+    - POST /api/v1/comment-attachment/upload
+    - GET /api/v1/comment-attachment/signed-url/{attachmentID}
+    - DELETE /api/v1/comment-attachment/delete/{attachmentID}
 implementation:
     router: internal/adapters/http/router.go
     handlers: internal/adapters/http/handlers/comment.go
     usecase: internal/usecase/comment/service.go
     persistence: internal/adapters/postgres
+    attachment_handler: internal/adapters/http/handlers/attachment.go
+    filestorage_adapter: internal/adapters/filestorage/client.go
 authentication:
     headers:
         - X-User-ID as UUID

@@ -37,4 +37,5 @@ type CommentRepository interface {
 	UpdateContent(ctx context.Context, comment domain.Comment, expectedVersion int) error
 	MarkDeleted(ctx context.Context, comment domain.Comment, expectedVersion int) error
 	IncrementReplyCount(ctx context.Context, threadID, commentID uuid.UUID) error
+	AdvanceSequence(ctx context.Context, commentID uuid.UUID, sequence int64, updatedAt time.Time) (domain.Comment, error)
 }
