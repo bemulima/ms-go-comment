@@ -21,6 +21,7 @@ invariants:
     - create idempotency key is unique per author
     - mutation sequence and outbox event commit atomically
     - attachment binding never crosses uploader or thread ownership
+    - realtime ticket preserves the optional requested last_sequence until atomic handshake consumption
 migration_policy:
     directory: db/migrations
     format: ordered reversible up/down pairs

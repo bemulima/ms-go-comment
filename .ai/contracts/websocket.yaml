@@ -9,6 +9,7 @@ authentication:
     ticket_endpoint: POST /api/v1/realtime/ticket
     maximum_ttl_seconds: 30
     access_token_in_url: forbidden
+    reconnect_context: requested last_sequence is stored with the ticket and returned on atomic consumption
 server_events:
     durable:
         - comment.created

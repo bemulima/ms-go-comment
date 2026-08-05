@@ -34,7 +34,7 @@ Owns event ID, aggregate identity, subject, versioned JSON payload, attempts, re
 
 ### `comment_ws_ticket`
 
-Owns only a cryptographic hash of the random ticket plus user, thread, permissions, and short expiry. Handshake consumption is atomic and destructive.
+Owns only a cryptographic hash of the random ticket plus user, thread, permissions, the client's optional requested `last_sequence`, and short expiry. Handshake consumption returns that sequence context atomically while deleting the ticket, so reconnect gap detection does not depend on WebSocket query parameters or untrusted post-upgrade state.
 
 ## Transaction invariants
 

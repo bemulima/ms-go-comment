@@ -4,10 +4,10 @@ WebSocket is a realtime projection of REST-owned state. Durable comment create/u
 
 ## Handshake
 
-1. An authenticated client requests `POST /api/v1/realtime/ticket` for one authorized thread and optional `last_sequence`.
+1. An authenticated client requests `POST /api/v1/realtime/ticket` for one authorized thread and optional `last_sequence`; the value is stored with the hashed ticket.
 2. The service returns a random opaque ticket with a maximum 30-second lifetime.
 3. A browser opens `/api/v1/ws` with subprotocols `comment.v1` and `ticket.<opaque>`.
-4. The WebSocket adapter validates `Origin`, atomically consumes the hashed ticket, binds the connection to its user/thread/permissions, and selects `comment.v1`.
+4. The WebSocket adapter validates `Origin`, atomically consumes the hashed ticket, binds the connection to its user/thread/permissions/requested sequence, and selects `comment.v1`.
 
 Access tokens must not be put in WebSocket URLs. A ticket is single-use and thread-scoped.
 
