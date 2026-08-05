@@ -4,7 +4,7 @@
 
 ## Status
 
-The repository is in the backend foundation phase. The versioned design map is in [docs/domain-map.md](docs/domain-map.md). The initial PostgreSQL schema, authenticated thread/comment REST API, validated FileStorage attachment lifecycle, pgx adapters, and transactional outbox writes are implemented. Outbox delivery and WebSocket runtime remain tracked by the backend epic.
+The repository is in the backend foundation phase. The versioned design map is in [docs/domain-map.md](docs/domain-map.md). PostgreSQL persistence, authenticated thread/comment REST, validated FileStorage attachments, transactional outbox delivery through NATS JetStream, single-use realtime tickets, and the thread-scoped WebSocket v1 projection are implemented.
 
 ## Architecture
 
@@ -29,7 +29,9 @@ task up
 make validate-contracts
 ```
 
-The service exposes `GET /healthz`. Business routes will be mounted under `/api/v1`, `/admin/v1`, and `/internal/v1`.
+The service exposes `GET /healthz`. `SERVICE_MODE` supports `all`, `api`,
+`realtime`, and `worker`; the default `all` process runs REST, WebSocket fan-out,
+attachment cleanup, ticket cleanup, and the outbox dispatcher.
 
 ## Security boundary
 

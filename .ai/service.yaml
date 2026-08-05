@@ -21,6 +21,11 @@ stack:
       confidence: 0.98
       source_path: go.mod
       explanation: The service declares github.com/go-chi/chi.
+    - name: realtime_transport
+      value: NATS JetStream and Gorilla WebSocket
+      confidence: 0.98
+      source_path: go.mod
+      explanation: The service declares nats.go and gorilla/websocket for durable and browser realtime delivery.
     - name: container
       value: docker
       confidence: 0.95
@@ -57,11 +62,16 @@ capabilities:
       confidence: 0.98
       source_path: internal/usecase/comment/attachment_service.go
       explanation: Comment owns authorization and metadata while FileStorage owns bytes.
-    - name: planned_business_capability
+    - name: realtime_websocket
       value: Ticket-authenticated realtime WebSocket projection
-      confidence: 0.95
-      source_path: docs/websocket-contract.md
-      explanation: The approved WebSocket contract defines this capability.
+      confidence: 0.98
+      source_path: internal/adapters/websocket/handler.go
+      explanation: Single-use tickets, sequence reconciliation, bounded local hub, and NATS fan-out implement the approved contract.
+    - name: transactional_outbox_delivery
+      value: Atomic PostgreSQL lease and JetStream publication with event ID deduplication
+      confidence: 0.98
+      source_path: internal/usecase/realtime/dispatcher.go
+      explanation: The dispatcher claims without holding a network transaction and records publish or retry evidence.
 relations:
     - name: depends_on
       value: postgres

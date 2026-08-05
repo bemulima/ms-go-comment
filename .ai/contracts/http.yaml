@@ -1,5 +1,5 @@
 schema_version: 1
-status: thread_comment_and_attachment_routes_implemented
+status: thread_comment_attachment_and_realtime_ticket_routes_implemented
 source_of_truth: docs/http-contract.md
 route_groups:
     - prefix: /api/v1
@@ -49,6 +49,8 @@ implemented_routes:
     - POST /api/v1/comment-attachment/upload
     - GET /api/v1/comment-attachment/signed-url/{attachmentID}
     - DELETE /api/v1/comment-attachment/delete/{attachmentID}
+    - POST /api/v1/realtime/ticket
+    - GET /api/v1/ws
 implementation:
     router: internal/adapters/http/router.go
     handlers: internal/adapters/http/handlers/comment.go
@@ -56,11 +58,14 @@ implementation:
     persistence: internal/adapters/postgres
     attachment_handler: internal/adapters/http/handlers/attachment.go
     filestorage_adapter: internal/adapters/filestorage/client.go
+    realtime_ticket_handler: internal/adapters/http/handlers/realtime.go
+    websocket_handler: internal/adapters/websocket/handler.go
 authentication:
     headers:
         - X-User-ID as UUID
         - X-User-Role as non-empty non-GUEST role
     actor_fields_in_body: rejected
+    websocket: single-use ticket in Sec-WebSocket-Protocol; gateway actor headers are not used
 pagination:
     default_limit: 20
     maximum_limit: 100

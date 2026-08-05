@@ -69,9 +69,13 @@ implemented_adapters:
     http: internal/adapters/http
     postgres: internal/adapters/postgres
     filestorage: internal/adapters/filestorage
+    nats: internal/adapters/nats
+    websocket: internal/adapters/websocket
 implemented_usecases:
     thread_and_comment: internal/usecase/comment/service.go
     attachment_lifecycle: internal/usecase/comment/attachment_service.go
+    realtime_tickets: internal/usecase/realtime/ticket_service.go
+    outbox_dispatch: internal/usecase/realtime/dispatcher.go
 external_ownership:
     - name: user_identity_and_profile
       owner: ms-go-auth/ms-go-user

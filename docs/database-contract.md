@@ -49,11 +49,15 @@ Activation/delete attempts, next retry timestamps, bounded failure evidence, and
 
 ### `comment_outbox`
 
-Owns event ID, aggregate identity, subject, versioned JSON payload, attempts, retry time, publication result, and error evidence. Dispatchers claim rows with `FOR UPDATE SKIP LOCKED` and publish with the event ID as the NATS deduplication ID.
+Owns event ID, aggregate identity, subject, versioned JSON payload, attempts, retry time/lease, publication result, and error evidence. Dispatchers atomically lease rows with `FOR UPDATE SKIP LOCKED`, commit before the network call, and publish with the event ID as the NATS deduplication ID.
 
 ### `comment_ws_ticket`
 
 Owns only a cryptographic hash of the random ticket plus user, thread, permissions, the client's optional requested `last_sequence`, and short expiry. Handshake consumption returns that sequence context atomically while deleting the ticket, so reconnect gap detection does not depend on WebSocket query parameters or untrusted post-upgrade state.
+
+The raw 256-bit ticket is returned once and never persisted. Consumption is one
+`DELETE ... WHERE expires_at > now RETURNING` statement; expired rows are
+removed in bounded cleanup batches.
 
 Permissions use a bit mask: `read=1`, `write=2`, `upload=4`; every ticket must
 include `read`. Only the 32-byte SHA-256 ticket hash is persisted.
