@@ -25,9 +25,13 @@ owned_tables:
     - name: comment_outbox
       issue: 3
       domain_source: internal/domain/outbox.go
+      delivery_issue: 6
+      repository_source: internal/adapters/postgres/outbox_repository.go
     - name: comment_ws_ticket
       issue: 3
       domain_source: internal/domain/realtime_ticket.go
+      lifecycle_issue: 6
+      repository_source: internal/adapters/postgres/realtime_ticket_repository.go
 invariants:
     - one thread per exact space/resource tuple
     - reply parent and root belong to the same thread
@@ -37,6 +41,8 @@ invariants:
     - attachment binding never crosses uploader or thread ownership
     - attachment activation and deletion retries are observable and idempotent
     - realtime ticket preserves the optional requested last_sequence until atomic handshake consumption
+    - outbox claim commits a finite retry lease before any NATS network call
+    - realtime ticket raw secret is never persisted and consume deletes it atomically
 migration_policy:
     directory: db/migrations
     format: ordered reversible up/down pairs

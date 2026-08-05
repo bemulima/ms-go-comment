@@ -37,9 +37,10 @@ Create accepts `thread_id`, optional `parent_id`, `body`, `attachment_ids`, and 
 
 Update accepts `body` and expected `version`. Delete requires the expected version and returns a tombstone representation.
 
-The implemented REST slice covers the eight thread/comment routes and all three
-attachment routes above. Realtime ticket and WebSocket routes remain reserved
-for their dedicated slice.
+The implemented REST slice covers the eight thread/comment routes, all three
+attachment routes, and realtime ticket minting. `GET /api/v1/ws` does not trust
+gateway actor headers; it authenticates only through a short-lived single-use
+ticket carried in `Sec-WebSocket-Protocol`.
 
 ### Thread DTOs
 
@@ -126,6 +127,20 @@ Signed URL returns `200`:
 Only `ready` attachments belonging to active, authorized comments qualify.
 Delete returns `200` with attachment status `deleted`; physical FileStorage
 cleanup is asynchronous and repeat requests return the same local outcome.
+
+### Realtime ticket DTO
+
+`POST /realtime/ticket` accepts only:
+
+```json
+{"thread_id":"00000000-0000-0000-0000-000000000001","last_sequence":42}
+```
+
+`last_sequence` is optional and non-negative. The endpoint authorizes the
+thread using the gateway actor and returns `201` with an opaque ticket,
+`expires_at`, and protocol `comment.v1`. TTL is at most 30 seconds. The ticket
+is never accepted in a query string and can complete only one WebSocket
+handshake.
 
 ## Admin API
 

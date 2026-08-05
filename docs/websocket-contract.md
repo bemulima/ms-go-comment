@@ -10,6 +10,9 @@ WebSocket is a realtime projection of REST-owned state. Durable comment create/u
 4. The WebSocket adapter validates `Origin`, atomically consumes the hashed ticket, binds the connection to its user/thread/permissions/requested sequence, and selects `comment.v1`.
 
 Access tokens must not be put in WebSocket URLs. A ticket is single-use and thread-scoped.
+The exact `Origin` must be present in the owning space allowlist. Missing or
+different origins fail the handshake. Query-string `ticket` and `access_token`
+credentials are rejected before upgrade.
 
 ## Envelope
 
@@ -33,4 +36,20 @@ Ephemeral types are `connection.ready`, `typing.started`, `typing.stopped`, `res
 
 `connection.ready` contains the current thread sequence. When a supplied last sequence is behind or the server detects a gap, it sends `resync_required`. The client calls `GET /api/v1/comment/changes` until it reaches the advertised current sequence before trusting subsequent frames.
 
+During handshake the hub registers the connection in a pre-ready state,
+buffers matching fan-out, re-reads `last_sequence` from PostgreSQL, and then
+activates the queue with `connection.ready` first. This closes the race where a
+commit could otherwise land between ticket consumption and hub registration.
+
 The adapter enforces bounded frame size, read/write deadlines, ping/pong liveness, per-user connection limits, and graceful close on shutdown.
+
+The implemented hub is process-local and partitions connections by thread ID.
+Each connection has a bounded outbound queue; a slow consumer is disconnected
+instead of allowing unbounded memory growth. The v1 server defaults are a 16
+KiB client frame, five connections per user, and 64 queued outbound frames.
+Application `ping`/`pong` frames coexist with WebSocket control-frame liveness.
+
+Lifecycle NATS subjects are mapped to the public names above. In particular,
+`comment.attachment.ready`, `comment.attachment.failed`, and
+`comment.thread.updated` become `attachment.ready`, `attachment.failed`, and
+`thread.updated`. Subject-specific fields are placed under `data`.

@@ -1,5 +1,5 @@
 schema_version: 1
-status: design_approved_implementation_pending
+status: implemented
 source_of_truth: docs/websocket-contract.md
 endpoint: GET /api/v1/ws
 protocol: comment.v1
@@ -34,3 +34,15 @@ client_events:
 recovery:
     sequence_source: comment_thread.last_sequence
     rest_endpoint: GET /api/v1/comment/changes
+implementation:
+    handler: internal/adapters/websocket/handler.go
+    hub: internal/adapters/websocket/hub.go
+    ticket_usecase: internal/usecase/realtime/ticket_service.go
+    ticket_repository: internal/adapters/postgres/realtime_ticket_repository.go
+limits:
+    default_max_frame_bytes: 16384
+    default_connections_per_user: 5
+    default_outbound_queue_frames: 64
+origin:
+    source: comment_space.allowed_origins
+    matching: exact

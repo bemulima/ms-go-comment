@@ -13,13 +13,14 @@ import (
 	"github.com/bemulima/ms-go-comment/internal/domain"
 	"github.com/bemulima/ms-go-comment/internal/domain/repository"
 	commentuc "github.com/bemulima/ms-go-comment/internal/usecase/comment"
+	realtimeuc "github.com/bemulima/ms-go-comment/internal/usecase/realtime"
 	"github.com/google/uuid"
 )
 
 func TestRouter_BusinessRoutesRequireGatewayActor(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(RouterDependencies{CommentService: &stubCommentService{}})
+	router := NewRouter(RouterDependencies{CommentService: &stubCommentService{}, RealtimeService: &stubRealtimeService{}})
 	tests := []struct {
 		name   string
 		method string
@@ -37,6 +38,7 @@ func TestRouter_BusinessRoutesRequireGatewayActor(t *testing.T) {
 		{name: "attachment upload", method: http.MethodPost, path: "/api/v1/comment-attachment/upload"},
 		{name: "attachment signed URL", method: http.MethodGet, path: "/api/v1/comment-attachment/signed-url/" + uuid.NewString()},
 		{name: "attachment delete", method: http.MethodDelete, path: "/api/v1/comment-attachment/delete/" + uuid.NewString()},
+		{name: "realtime ticket", method: http.MethodPost, path: "/api/v1/realtime/ticket", body: `{}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -47,6 +49,44 @@ func TestRouter_BusinessRoutesRequireGatewayActor(t *testing.T) {
 				t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 			}
 		})
+	}
+}
+
+func TestRouter_MintsRealtimeTicket(t *testing.T) {
+	t.Parallel()
+
+	threadID := uuid.New()
+	lastSequence := int64(12)
+	called := false
+	service := &stubRealtimeService{mint: func(_ context.Context, _ domain.Actor, input realtimeuc.MintTicketInput) (realtimeuc.MintedTicket, error) {
+		called = true
+		if input.ThreadID != threadID || input.LastSequence == nil || *input.LastSequence != lastSequence {
+			t.Fatalf("ticket input = %#v", input)
+		}
+		return realtimeuc.MintedTicket{Ticket: "opaque", Protocol: "comment.v1", ExpiresAt: time.Now().UTC()}, nil
+	}}
+	request := authenticatedRequest(http.MethodPost, "/api/v1/realtime/ticket",
+		`{"thread_id":"`+threadID.String()+`","last_sequence":12}`)
+	response := httptest.NewRecorder()
+	NewRouter(RouterDependencies{RealtimeService: service}).ServeHTTP(response, request)
+	if response.Code != http.StatusCreated || !called || !strings.Contains(response.Body.String(), `"ticket":"opaque"`) {
+		t.Fatalf("status=%d called=%v body=%s", response.Code, called, response.Body.String())
+	}
+}
+
+func TestRouter_WebSocketRouteUsesTicketHandlerWithoutGatewayActor(t *testing.T) {
+	t.Parallel()
+
+	called := false
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusSwitchingProtocols)
+	})
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/ws", nil)
+	response := httptest.NewRecorder()
+	NewRouter(RouterDependencies{WebSocketHandler: handler}).ServeHTTP(response, request)
+	if response.Code != http.StatusSwitchingProtocols || !called {
+		t.Fatalf("status=%d called=%v", response.Code, called)
 	}
 }
 
@@ -139,6 +179,17 @@ func authenticatedRequest(method, path, body string) *http.Request {
 type stubCommentService struct {
 	create           func(context.Context, domain.Actor, commentuc.CreateCommentInput) (commentuc.CreateCommentResult, error)
 	uploadAttachment func(context.Context, domain.Actor, commentuc.UploadAttachmentInput) (domain.Attachment, error)
+}
+
+type stubRealtimeService struct {
+	mint func(context.Context, domain.Actor, realtimeuc.MintTicketInput) (realtimeuc.MintedTicket, error)
+}
+
+func (s *stubRealtimeService) Mint(ctx context.Context, actor domain.Actor, input realtimeuc.MintTicketInput) (realtimeuc.MintedTicket, error) {
+	if s.mint != nil {
+		return s.mint(ctx, actor, input)
+	}
+	return realtimeuc.MintedTicket{}, nil
 }
 
 func (s *stubCommentService) EnsureThread(context.Context, domain.Actor, commentuc.EnsureThreadInput) (commentuc.ThreadView, error) {

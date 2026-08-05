@@ -97,15 +97,24 @@ func scanAttachment(row scanner) (domain.Attachment, error) {
 	return item, mapError(err)
 }
 
-const outboxColumns = `id, aggregate_type, aggregate_id, subject, schema_version,
-payload, attempts, next_attempt_at, published_at, COALESCE(last_error, ''), created_at`
-
 func scanOutbox(row scanner) (domain.OutboxEvent, error) {
 	var item domain.OutboxEvent
 	err := row.Scan(
 		&item.ID, &item.AggregateType, &item.AggregateID, &item.Subject, &item.SchemaVersion,
 		&item.Payload, &item.Attempts, &item.NextAttemptAt, &item.PublishedAt, &item.LastError,
 		&item.CreatedAt,
+	)
+	return item, mapError(err)
+}
+
+const realtimeTicketColumns = `ticket_hash, user_id, thread_id, permissions,
+requested_last_sequence, expires_at, created_at`
+
+func scanRealtimeTicket(row scanner) (domain.RealtimeTicket, error) {
+	var item domain.RealtimeTicket
+	err := row.Scan(
+		&item.TicketHash, &item.UserID, &item.ThreadID, &item.Permissions,
+		&item.RequestedLastSequence, &item.ExpiresAt, &item.CreatedAt,
 	)
 	return item, mapError(err)
 }

@@ -1,5 +1,5 @@
 schema_version: 1
-status: transactional_outbox_write_implemented_delivery_pending
+status: implemented
 source_of_truth: docs/realtime-delivery.md
 delivery:
     durable_transport: NATS JetStream
@@ -29,3 +29,13 @@ producer_source: internal/usecase/comment/service.go
 outbox_repository: internal/adapters/postgres/outbox_repository.go
 attachment_lifecycle_source: internal/usecase/comment/attachment_service.go
 attachment_worker: cmd/ms-comment-service/main.go
+dispatcher: internal/usecase/realtime/dispatcher.go
+nats_publisher: internal/adapters/nats/client.go
+nats_subscriber: internal/adapters/nats/subscriber.go
+outbox_claim:
+    strategy: atomic lease using next_attempt_at and FOR UPDATE SKIP LOCKED
+    network_inside_transaction: false
+    retry_backoff: 5 seconds exponential capped at 5 minutes
+ephemeral:
+    transport: Core NATS
+    subject: comment.realtime.typing.<thread_uuid>

@@ -30,4 +30,5 @@ var (
 	ErrParentNotFound         = errors.New("parent not found")
 	ErrAttachmentNotFound     = errors.New("attachment not found")
 	ErrAttachmentNotReady     = errors.New("attachment is not ready")
+	ErrRealtimeTicketInvalid  = errors.New("realtime ticket is invalid or expired")
 )

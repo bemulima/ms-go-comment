@@ -10,7 +10,9 @@ import (
 )
 
 type RouterDependencies struct {
-	CommentService handlers.CommentService
+	CommentService   handlers.CommentService
+	RealtimeService  handlers.RealtimeService
+	WebSocketHandler http.Handler
 }
 
 func NewRouter(deps RouterDependencies) http.Handler {
@@ -34,6 +36,13 @@ func NewRouter(deps RouterDependencies) http.Handler {
 			api.Get("/comment-attachment/signed-url/{attachmentID}", handler.GetAttachmentSignedURL)
 			api.Delete("/comment-attachment/delete/{attachmentID}", handler.DeleteAttachment)
 		})
+	}
+	if deps.RealtimeService != nil {
+		handler := handlers.RealtimeHandler{Service: deps.RealtimeService}
+		router.With(httpmw.RequireActor(handlers.WriteError)).Post("/api/v1/realtime/ticket", handler.MintTicket)
+	}
+	if deps.WebSocketHandler != nil {
+		router.Handle("/api/v1/ws", deps.WebSocketHandler)
 	}
 	router.NotFound(func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found", "message": "route not found"})
