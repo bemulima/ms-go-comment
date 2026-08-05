@@ -1,0 +1,49 @@
+version: '3'
+
+dotenv: ['.env']
+
+tasks:
+  fmt:
+    desc: Format Go source
+    cmds:
+      - gofmt -w cmd internal
+
+  deps:
+    desc: Download Go modules into the repository-local cache
+    cmds:
+      - XDG_CACHE_HOME=$PWD/.cache GOMODCACHE=$PWD/.cache/gomod go mod download all
+
+  tidy:
+    desc: Reconcile Go module metadata
+    cmds:
+      - XDG_CACHE_HOME=$PWD/.cache GOMODCACHE=$PWD/.cache/gomod go mod tidy
+
+  run:
+    desc: Run the service locally
+    cmds:
+      - go run ./cmd/ms-comment-service
+
+  test:
+    desc: Run unit and integration tests with repository-local caches
+    cmds:
+      - XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go test ./...
+
+  lint:
+    desc: Run the Go linter
+    cmds:
+      - $PWD/.cache/bin/golangci-lint run ./...
+
+  validate-contracts:
+    desc: Validate checked-in agent contracts
+    cmds:
+      - make validate-contracts
+
+  up:
+    desc: Start the local service and PostgreSQL
+    cmds:
+      - docker compose up -d --build
+
+  down:
+    desc: Stop the local stack and remove its volumes
+    cmds:
+      - docker compose down -v

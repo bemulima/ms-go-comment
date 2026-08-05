@@ -1,0 +1,9 @@
+.cache/
+.env
+/ms-comment-service
+*.exe
+*.dll
+*.so
+*.dylib
+coverage.out
+docker-compose.override.yml

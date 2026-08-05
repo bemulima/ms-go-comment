@@ -1,0 +1,39 @@
+services:
+  postgres:
+    container_name: ms-comment-postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ms_comment}
+    ports:
+      - "${POSTGRES_PORT:-5443}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  ms-comment-service:
+    container_name: ms-comment-service
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      HTTP_PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ms_comment}?sslmode=disable
+      NATS_URL: nats://nats:4222
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me}
+      FILESTORAGE_SERVICE_BASE_URL: http://ms-filestorage:8080
+      SERVICE_MODE: all
+    depends_on:
+      - postgres
+    ports:
+      - "${COMMENT_PORT:-8092}:8080"
+    networks:
+      - default
+      - ms-net
+
+volumes:
+  pgdata:
+
+networks:
+  ms-net:
+    external: true
