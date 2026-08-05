@@ -83,6 +83,43 @@ func TestInitialMigrationContainsCriticalIntegrityRules(t *testing.T) {
 	}
 }
 
+func TestMigrationPairsAndAttachmentDeliveryEvidence(t *testing.T) {
+	t.Parallel()
+
+	_, source, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot resolve test source path")
+	}
+	directory := filepath.Join(filepath.Dir(source), "..", "..", "db", "migrations")
+	upFiles, err := filepath.Glob(filepath.Join(directory, "*.up.sql"))
+	if err != nil {
+		t.Fatalf("glob up migrations: %v", err)
+	}
+	downFiles, err := filepath.Glob(filepath.Join(directory, "*.down.sql"))
+	if err != nil {
+		t.Fatalf("glob down migrations: %v", err)
+	}
+	if len(upFiles) != len(downFiles) {
+		t.Fatalf("migration pair count: up=%d down=%d", len(upFiles), len(downFiles))
+	}
+	for _, up := range upFiles {
+		down := strings.TrimSuffix(up, ".up.sql") + ".down.sql"
+		if _, err := os.Stat(down); err != nil {
+			t.Errorf("missing down migration for %s", filepath.Base(up))
+		}
+	}
+	delivery := readMigration(t, "002_attachment_delivery.up.sql")
+	for _, fragment := range []string{
+		"activation_attempts", "activation_next_attempt_at", "delete_attempts",
+		"delete_next_attempt_at", "storage_deleted_at", "WHERE status = 2",
+		"WHERE status = 5 AND storage_deleted_at IS NULL",
+	} {
+		if !strings.Contains(delivery, fragment) {
+			t.Errorf("attachment delivery migration is missing %q", fragment)
+		}
+	}
+}
+
 func readMigration(t *testing.T, name string) string {
 	t.Helper()
 	_, source, _, ok := runtime.Caller(0)

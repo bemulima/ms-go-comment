@@ -37,9 +37,9 @@ Create accepts `thread_id`, optional `parent_id`, `body`, `attachment_ids`, and 
 
 Update accepts `body` and expected `version`. Delete requires the expected version and returns a tombstone representation.
 
-The first implemented REST slice covers the eight thread/comment routes above.
-Attachment upload/signed URL/delete, realtime ticket, and WebSocket routes remain
-reserved for their dedicated slices.
+The implemented REST slice covers the eight thread/comment routes and all three
+attachment routes above. Realtime ticket and WebSocket routes remain reserved
+for their dedicated slice.
 
 ### Thread DTOs
 
@@ -109,6 +109,23 @@ cursor cannot be reused for another tree edge. The response is:
 
 It projects the latest durable state of comment aggregates changed after the
 sequence, ordered by sequence. Clients keep reconciling while `has_more=true`.
+
+### Attachment DTOs
+
+Upload uses `multipart/form-data` with a UUID `thread_id` field and one `file`
+part. It returns `201` with safe attachment metadata in `pending` state. The
+response MIME and dimensions come from server-side decoding, not multipart
+headers. The later comment create call binds returned attachment IDs.
+
+Signed URL returns `200`:
+
+```json
+{"url":"https://storage.example/...","expires_at":"2026-08-05T12:05:00Z"}
+```
+
+Only `ready` attachments belonging to active, authorized comments qualify.
+Delete returns `200` with attachment status `deleted`; physical FileStorage
+cleanup is asynchronous and repeat requests return the same local outcome.
 
 ## Admin API
 

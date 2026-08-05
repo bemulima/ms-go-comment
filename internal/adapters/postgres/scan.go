@@ -80,7 +80,9 @@ func scanComments(rows pgx.Rows) ([]domain.Comment, error) {
 
 const attachmentColumns = `id, thread_id, comment_id, uploader_id,
 filestorage_id, status, mime_type, size_bytes, width, height,
-original_filename, expires_at, activated_at, deleted_at, created_at, updated_at`
+original_filename, expires_at, activated_at, deleted_at, activation_attempts,
+activation_next_attempt_at, delete_attempts, delete_next_attempt_at, COALESCE(last_error, ''),
+storage_deleted_at, created_at, updated_at`
 
 func scanAttachment(row scanner) (domain.Attachment, error) {
 	var item domain.Attachment
@@ -88,6 +90,8 @@ func scanAttachment(row scanner) (domain.Attachment, error) {
 		&item.ID, &item.ThreadID, &item.CommentID, &item.UploaderID, &item.FileStorageID,
 		&item.Status, &item.MIMEType, &item.SizeBytes, &item.Width, &item.Height,
 		&item.OriginalFilename, &item.ExpiresAt, &item.ActivatedAt, &item.DeletedAt,
+		&item.ActivationAttempts, &item.ActivationNextAttemptAt, &item.DeleteAttempts,
+		&item.DeleteNextAttemptAt, &item.LastError, &item.StorageDeletedAt,
 		&item.CreatedAt, &item.UpdatedAt,
 	)
 	return item, mapError(err)

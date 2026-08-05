@@ -303,6 +303,15 @@ func (s fakeThreads) NextSequence(_ context.Context, id uuid.UUID) (int64, error
 	s.threads[id] = item
 	return item.LastSequence, nil
 }
+func (s fakeThreads) NextSequenceAnyState(_ context.Context, id uuid.UUID) (int64, error) {
+	item, ok := s.threads[id]
+	if !ok {
+		return 0, domain.ErrNotFound
+	}
+	item.LastSequence++
+	s.threads[id] = item
+	return item.LastSequence, nil
+}
 
 func (s fakeThreads) RecordCommentCreated(_ context.Context, id uuid.UUID, root bool) error {
 	item := s.threads[id]
@@ -378,6 +387,17 @@ func (s fakeComments) IncrementReplyCount(_ context.Context, _, id uuid.UUID) er
 	s.comments[id] = item
 	return nil
 }
+func (s fakeComments) AdvanceSequence(_ context.Context, id uuid.UUID, sequence int64, updatedAt time.Time) (domain.Comment, error) {
+	item, ok := s.comments[id]
+	if !ok {
+		return domain.Comment{}, domain.ErrNotFound
+	}
+	item.Sequence = sequence
+	item.Version++
+	item.UpdatedAt = updatedAt
+	s.comments[id] = item
+	return item, nil
+}
 
 func (s fakeAttachments) Create(_ context.Context, item domain.Attachment) error {
 	s.attachments[item.ID] = item
@@ -390,14 +410,27 @@ func (s fakeAttachments) GetByID(_ context.Context, id uuid.UUID) (domain.Attach
 	}
 	return item, nil
 }
+func (s fakeAttachments) GetByIDForUpdate(ctx context.Context, id uuid.UUID) (domain.Attachment, error) {
+	return s.GetByID(ctx, id)
+}
 func (s fakeAttachments) ListByComment(_ context.Context, threadID, commentID uuid.UUID) ([]domain.Attachment, error) {
 	items := make([]domain.Attachment, 0)
 	for _, item := range s.attachments {
-		if item.ThreadID == threadID && item.CommentID != nil && *item.CommentID == commentID {
+		if item.ThreadID == threadID && item.CommentID != nil && *item.CommentID == commentID && item.Status != domain.AttachmentStatusDeleted {
 			items = append(items, item)
 		}
 	}
 	return items, nil
+}
+func (s fakeAttachments) CountPendingByUploader(_ context.Context, threadID, uploaderID uuid.UUID, now time.Time) (int, error) {
+	count := 0
+	for _, item := range s.attachments {
+		if item.ThreadID == threadID && item.UploaderID == uploaderID && item.Status == domain.AttachmentStatusPending &&
+			item.CommentID == nil && item.ExpiresAt.After(now) {
+			count++
+		}
+	}
+	return count, nil
 }
 func (s fakeAttachments) BindToComment(_ context.Context, id, threadID, commentID, uploaderID uuid.UUID) error {
 	item := s.attachments[id]
@@ -412,8 +445,92 @@ func (s fakeAttachments) UpdateStatus(_ context.Context, item domain.Attachment)
 	s.attachments[item.ID] = item
 	return nil
 }
-func (s fakeAttachments) ListExpired(context.Context, time.Time, int) ([]domain.Attachment, error) {
-	return nil, nil
+func (s fakeAttachments) ListExpired(_ context.Context, before time.Time, limit int) ([]domain.Attachment, error) {
+	items := make([]domain.Attachment, 0)
+	for _, item := range s.attachments {
+		if item.Status == domain.AttachmentStatusPending && item.ExpiresAt.Before(before) {
+			items = append(items, item)
+		}
+	}
+	if len(items) > limit {
+		items = items[:limit]
+	}
+	return items, nil
+}
+func (s fakeAttachments) ListForActivation(_ context.Context, now time.Time, limit int) ([]domain.Attachment, error) {
+	items := make([]domain.Attachment, 0)
+	for _, item := range s.attachments {
+		if item.Status == domain.AttachmentStatusProcessing && (item.ActivationNextAttemptAt == nil || !item.ActivationNextAttemptAt.After(now)) {
+			items = append(items, item)
+		}
+	}
+	if len(items) > limit {
+		items = items[:limit]
+	}
+	return items, nil
+}
+func (s fakeAttachments) MarkReadyIfProcessing(_ context.Context, id uuid.UUID, now time.Time) (domain.Attachment, bool, error) {
+	item, ok := s.attachments[id]
+	if !ok || item.Status != domain.AttachmentStatusProcessing {
+		return domain.Attachment{}, false, nil
+	}
+	item.Status = domain.AttachmentStatusReady
+	item.ActivatedAt = &now
+	item.ActivationNextAttemptAt = nil
+	item.UpdatedAt = now
+	s.attachments[id] = item
+	return item, true, nil
+}
+func (s fakeAttachments) RecordActivationFailure(_ context.Context, id uuid.UUID, next time.Time, message string, maxAttempts int) (domain.Attachment, bool, error) {
+	item, ok := s.attachments[id]
+	if !ok || item.Status != domain.AttachmentStatusProcessing {
+		return domain.Attachment{}, false, nil
+	}
+	item.ActivationAttempts++
+	item.LastError = message
+	terminal := item.ActivationAttempts >= maxAttempts
+	if terminal {
+		item.Status = domain.AttachmentStatusFailed
+		item.ActivationNextAttemptAt = nil
+	} else {
+		item.ActivationNextAttemptAt = &next
+	}
+	s.attachments[id] = item
+	return item, terminal, nil
+}
+func (s fakeAttachments) ListForDeletion(_ context.Context, now time.Time, limit int) ([]domain.Attachment, error) {
+	items := make([]domain.Attachment, 0)
+	for _, item := range s.attachments {
+		if item.Status == domain.AttachmentStatusDeleted && item.StorageDeletedAt == nil &&
+			(item.DeleteNextAttemptAt == nil || !item.DeleteNextAttemptAt.After(now)) {
+			items = append(items, item)
+		}
+	}
+	if len(items) > limit {
+		items = items[:limit]
+	}
+	return items, nil
+}
+func (s fakeAttachments) MarkStorageDeleted(_ context.Context, id uuid.UUID, now time.Time) error {
+	item, ok := s.attachments[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	item.StorageDeletedAt = &now
+	item.DeleteNextAttemptAt = nil
+	s.attachments[id] = item
+	return nil
+}
+func (s fakeAttachments) RecordDeleteFailure(_ context.Context, id uuid.UUID, next time.Time, message string) error {
+	item, ok := s.attachments[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	item.DeleteAttempts++
+	item.DeleteNextAttemptAt = &next
+	item.LastError = message
+	s.attachments[id] = item
+	return nil
 }
 
 func (s fakeOutbox) Add(_ context.Context, event domain.OutboxEvent) error {

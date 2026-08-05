@@ -358,11 +358,7 @@ func projectComment(view commentuc.CommentView) commentResponse {
 	item := view.Comment
 	attachments := make([]attachmentResponse, 0, len(view.Attachments))
 	for _, attachment := range view.Attachments {
-		attachments = append(attachments, attachmentResponse{
-			ID: attachment.ID, Status: attachmentStatus(attachment.Status), MIMEType: attachment.MIMEType,
-			SizeBytes: attachment.SizeBytes, Width: attachment.Width, Height: attachment.Height,
-			OriginalFilename: attachment.OriginalFilename,
-		})
+		attachments = append(attachments, projectAttachment(attachment))
 	}
 	links := item.Links
 	if links == nil {
@@ -378,6 +374,14 @@ func projectComment(view commentuc.CommentView) commentResponse {
 		Body: item.Body, Links: links, Attachments: attachments, Status: commentStatus(item.Status),
 		Version: item.Version, Sequence: item.Sequence, DirectRepliesCount: item.DirectRepliesCount,
 		EditedAt: item.EditedAt, DeletedAt: item.DeletedAt, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
+	}
+}
+
+func projectAttachment(attachment domain.Attachment) attachmentResponse {
+	return attachmentResponse{
+		ID: attachment.ID, Status: attachmentStatus(attachment.Status), MIMEType: attachment.MIMEType,
+		SizeBytes: attachment.SizeBytes, Width: attachment.Width, Height: attachment.Height,
+		OriginalFilename: attachment.OriginalFilename,
 	}
 }
 

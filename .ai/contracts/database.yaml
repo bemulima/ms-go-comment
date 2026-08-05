@@ -1,9 +1,13 @@
 schema_version: 1
 status: schema_and_domain_contract_implemented
 source_of_truth: docs/database-contract.md
-migration:
-    up: db/migrations/001_init.up.sql
-    down: db/migrations/001_init.down.sql
+migrations:
+    - up: db/migrations/001_init.up.sql
+      down: db/migrations/001_init.down.sql
+      issue: 3
+    - up: db/migrations/002_attachment_delivery.up.sql
+      down: db/migrations/002_attachment_delivery.down.sql
+      issue: 5
 owned_tables:
     - name: comment_space
       issue: 3
@@ -17,6 +21,7 @@ owned_tables:
     - name: comment_attachment
       issue: 3
       domain_source: internal/domain/attachment.go
+      lifecycle_delivery_issue: 5
     - name: comment_outbox
       issue: 3
       domain_source: internal/domain/outbox.go
@@ -30,6 +35,7 @@ invariants:
     - create idempotency key is unique per author
     - mutation sequence and outbox event commit atomically
     - attachment binding never crosses uploader or thread ownership
+    - attachment activation and deletion retries are observable and idempotent
     - realtime ticket preserves the optional requested last_sequence until atomic handshake consumption
 migration_policy:
     directory: db/migrations

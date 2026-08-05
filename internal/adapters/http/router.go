@@ -30,6 +30,9 @@ func NewRouter(deps RouterDependencies) http.Handler {
 			api.Post("/comment/create", handler.CreateComment)
 			api.Put("/comment/update/{commentID}", handler.UpdateComment)
 			api.Delete("/comment/delete/{commentID}", handler.DeleteComment)
+			api.Post("/comment-attachment/upload", handler.UploadAttachment)
+			api.Get("/comment-attachment/signed-url/{attachmentID}", handler.GetAttachmentSignedURL)
+			api.Delete("/comment-attachment/delete/{attachmentID}", handler.DeleteAttachment)
 		})
 	}
 	router.NotFound(func(w http.ResponseWriter, _ *http.Request) {

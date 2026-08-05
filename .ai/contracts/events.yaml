@@ -27,3 +27,5 @@ consumer_rules:
     - reconcile gaps through GET /api/v1/comment/changes
 producer_source: internal/usecase/comment/service.go
 outbox_repository: internal/adapters/postgres/outbox_repository.go
+attachment_lifecycle_source: internal/usecase/comment/attachment_service.go
+attachment_worker: cmd/ms-comment-service/main.go

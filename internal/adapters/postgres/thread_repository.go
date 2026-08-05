@@ -75,6 +75,14 @@ WHERE id=$1 AND status=1 RETURNING last_sequence`, threadID).Scan(&sequence)
 	return 0, domain.ErrNotFound
 }
 
+func (r ThreadRepository) NextSequenceAnyState(ctx context.Context, threadID uuid.UUID) (int64, error) {
+	var sequence int64
+	err := runner(ctx, r.Pool).QueryRow(ctx, `UPDATE comment_thread
+SET last_sequence=last_sequence+1, updated_at=NOW()
+WHERE id=$1 RETURNING last_sequence`, threadID).Scan(&sequence)
+	return sequence, mapError(err)
+}
+
 func (r ThreadRepository) RecordCommentCreated(ctx context.Context, threadID uuid.UUID, root bool) error {
 	command, err := runner(ctx, r.Pool).Exec(ctx, `UPDATE comment_thread SET
 comment_count=comment_count+1,

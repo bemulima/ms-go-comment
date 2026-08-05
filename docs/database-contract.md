@@ -7,6 +7,8 @@ PostgreSQL is owned exclusively by `ms-go-comment`. Migrations are ordered, reve
 The initial schema is implemented by the reversible pair
 `db/migrations/001_init.up.sql` / `001_init.down.sql`. The down migration removes
 tables in reverse dependency order and deliberately does not use `CASCADE`.
+`002_attachment_delivery.up.sql` / `.down.sql` adds only retry/delivery evidence
+to `comment_attachment` plus partial worker indexes.
 
 ### `comment_space`
 
@@ -42,6 +44,8 @@ Owns thread/comment/uploader bindings, FileStorage identity, lifecycle status,
 safe media metadata, TTL, activation, and deletion timestamps. Bytes remain
 owned by FileStorage. Status values are `1 pending`, `2 processing`, `3 ready`,
 `4 failed`, `5 deleted`; MIME types are limited to JPEG, PNG, and WebP.
+Activation/delete attempts, next retry timestamps, bounded failure evidence, and
+`storage_deleted_at` make worker outcomes observable and retriable.
 
 ### `comment_outbox`
 
