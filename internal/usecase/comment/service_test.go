@@ -537,7 +537,7 @@ func (s fakeOutbox) Add(_ context.Context, event domain.OutboxEvent) error {
 	s.outbox = append(s.outbox, event)
 	return nil
 }
-func (s fakeOutbox) ClaimPending(context.Context, time.Time, int) ([]domain.OutboxEvent, error) {
+func (s fakeOutbox) ClaimPending(context.Context, time.Time, time.Time, int) ([]domain.OutboxEvent, error) {
 	return nil, nil
 }
 func (s fakeOutbox) MarkPublished(context.Context, uuid.UUID, time.Time) error      { return nil }

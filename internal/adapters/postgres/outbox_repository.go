@@ -24,10 +24,16 @@ next_attempt_at, published_at, last_error, created_at
 	return mapError(err)
 }
 
-func (r OutboxRepository) ClaimPending(ctx context.Context, now time.Time, limit int) ([]domain.OutboxEvent, error) {
-	rows, err := runner(ctx, r.Pool).Query(ctx, `SELECT `+outboxColumns+`
-FROM comment_outbox WHERE published_at IS NULL AND next_attempt_at<=$1
-ORDER BY next_attempt_at, created_at, id LIMIT $2 FOR UPDATE SKIP LOCKED`, now, limit)
+func (r OutboxRepository) ClaimPending(ctx context.Context, now, leaseUntil time.Time, limit int) ([]domain.OutboxEvent, error) {
+	rows, err := runner(ctx, r.Pool).Query(ctx, `WITH pending AS (
+    SELECT id FROM comment_outbox WHERE published_at IS NULL AND next_attempt_at<=$1
+    ORDER BY next_attempt_at, created_at, id LIMIT $3 FOR UPDATE SKIP LOCKED
+)
+UPDATE comment_outbox item SET next_attempt_at=$2
+FROM pending WHERE item.id=pending.id RETURNING
+item.id, item.aggregate_type, item.aggregate_id, item.subject, item.schema_version,
+item.payload, item.attempts, item.next_attempt_at, item.published_at,
+COALESCE(item.last_error, ''), item.created_at`, now, leaseUntil, limit)
 	if err != nil {
 		return nil, err
 	}
