@@ -24,6 +24,7 @@ func TestErrorContract(t *testing.T) {
 		{name: "content", err: domain.ErrInvalidCommentContent, status: http.StatusUnprocessableEntity, code: "invalid_comment_content"},
 		{name: "policy", err: domain.ErrInvalidPolicy, status: http.StatusUnprocessableEntity, code: "invalid_comment_content"},
 		{name: "configuration conflict", err: domain.ErrConflict, status: http.StatusConflict, code: "configuration_conflict"},
+		{name: "moderation conflict", err: domain.ErrModerationConflict, status: http.StatusConflict, code: "comment_moderation_conflict"},
 		{name: "attachment missing", err: domain.ErrAttachmentNotFound, status: http.StatusNotFound, code: "attachment_not_found"},
 		{name: "attachment processing", err: domain.ErrAttachmentNotReady, status: http.StatusConflict, code: "attachment_not_ready"},
 		{name: "realtime ticket", err: domain.ErrRealtimeTicketInvalid, status: http.StatusUnauthorized, code: "realtime_ticket_invalid"},

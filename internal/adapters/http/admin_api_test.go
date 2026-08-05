@@ -28,7 +28,7 @@ func TestRouter_AdminRoutesRequireActor(t *testing.T) {
 func TestRouter_AdminConfigurationRoutes(t *testing.T) {
 	t.Parallel()
 
-	spaceID, threadID := uuid.New(), uuid.New()
+	spaceID, threadID, commentID := uuid.New(), uuid.New(), uuid.New()
 	policy := `"policy":{"allow_images":false,"allow_links":true,"max_depth":10,"max_body_length":10000,"max_attachments":4,"max_image_bytes":5242880,"edit_window_seconds":900}`
 	tests := []struct {
 		name, method, path, body, call string
@@ -41,10 +41,12 @@ func TestRouter_AdminConfigurationRoutes(t *testing.T) {
 		{name: "disable space", method: http.MethodDelete, path: "/admin/v1/space/delete/" + spaceID.String(), call: "disable-space", status: http.StatusOK},
 		{name: "list threads", method: http.MethodGet, path: "/admin/v1/thread/list?space_id=" + spaceID.String(), call: "list-threads", status: http.StatusOK},
 		{name: "update thread", method: http.MethodPut, path: "/admin/v1/thread/update/" + threadID.String(), body: `{"status":"read_only","policy_overrides":{"allow_images":true}}`, call: "update-thread", status: http.StatusOK},
+		{name: "hide comment", method: http.MethodPut, path: "/admin/v1/comment/hide/" + commentID.String(), call: "hide-comment", status: http.StatusOK},
+		{name: "restore comment", method: http.MethodPut, path: "/admin/v1/comment/restore/" + commentID.String(), call: "restore-comment", status: http.StatusOK},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service := &stubAdminService{spaceID: spaceID, threadID: threadID}
+			service := &stubAdminService{spaceID: spaceID, threadID: threadID, commentID: commentID}
 			request := httptest.NewRequest(tt.method, tt.path, strings.NewReader(tt.body))
 			request.Header.Set("X-User-ID", uuid.NewString())
 			request.Header.Set("X-User-Role", "ADMIN")
@@ -61,9 +63,24 @@ func TestRouter_AdminConfigurationRoutes(t *testing.T) {
 	}
 }
 
+func TestRouter_AdminModerationRejectsRequestBody(t *testing.T) {
+	t.Parallel()
+
+	service := &stubAdminService{commentID: uuid.New()}
+	request := httptest.NewRequest(http.MethodPut, "/admin/v1/comment/hide/"+service.commentID.String(), strings.NewReader(`{}`))
+	request.Header.Set("X-User-ID", uuid.NewString())
+	request.Header.Set("X-User-Role", "MODERATOR")
+	response := httptest.NewRecorder()
+
+	NewRouter(RouterDependencies{AdminService: service}).ServeHTTP(response, request)
+	if response.Code != http.StatusUnprocessableEntity || service.call != "" {
+		t.Fatalf("status=%d call=%q body=%s", response.Code, service.call, response.Body.String())
+	}
+}
+
 type stubAdminService struct {
-	spaceID, threadID uuid.UUID
-	call              string
+	spaceID, threadID, commentID uuid.UUID
+	call                         string
 }
 
 func (s *stubAdminService) space(actor domain.Actor) domain.Space {
@@ -101,7 +118,23 @@ func (s *stubAdminService) UpdateThread(_ context.Context, _ domain.Actor, _ adm
 	s.call = "update-thread"
 	return s.threadView(), nil
 }
+func (s *stubAdminService) HideComment(_ context.Context, _ domain.Actor, _ uuid.UUID) (adminuc.ModerationView, error) {
+	s.call = "hide-comment"
+	view := s.commentView()
+	view.Comment.Status = domain.CommentStatusHidden
+	return view, nil
+}
+func (s *stubAdminService) RestoreComment(_ context.Context, _ domain.Actor, _ uuid.UUID) (adminuc.ModerationView, error) {
+	s.call = "restore-comment"
+	return s.commentView(), nil
+}
 func (s *stubAdminService) threadView() adminuc.ThreadView {
 	return adminuc.ThreadView{Thread: domain.Thread{ID: s.threadID, SpaceID: s.spaceID,
 		Resource: domain.ResourceReference{Type: "lesson", ID: "lesson-1"}, Status: domain.ThreadStatusOpen}, Policy: domain.DefaultPolicy()}
+}
+func (s *stubAdminService) commentView() adminuc.ModerationView {
+	now := time.Now().UTC()
+	return adminuc.ModerationView{Comment: domain.Comment{ID: s.commentID, ThreadID: s.threadID,
+		AuthorID: uuid.New(), RootID: s.commentID, Path: []uuid.UUID{s.commentID}, Body: "comment",
+		Status: domain.CommentStatusActive, Version: 1, IdempotencyKey: uuid.New(), CreatedAt: now, UpdatedAt: now}}
 }

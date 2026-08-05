@@ -66,6 +66,14 @@ func TestService_GetAttachmentSignedURLRequiresReadyVisibleComment(t *testing.T)
 	if _, err := service.GetAttachmentSignedURL(context.Background(), actor, attachmentID); !errors.Is(err, domain.ErrAttachmentNotReady) {
 		t.Fatalf("processing attachment error = %v", err)
 	}
+	attachment.Status = domain.AttachmentStatusReady
+	store.attachments[attachmentID] = attachment
+	comment := store.comments[commentID]
+	comment.Status = domain.CommentStatusHidden
+	store.comments[commentID] = comment
+	if _, err := service.GetAttachmentSignedURL(context.Background(), actor, attachmentID); !errors.Is(err, domain.ErrAttachmentNotFound) {
+		t.Fatalf("hidden comment attachment error = %v", err)
+	}
 }
 
 func TestService_ProcessAttachmentWorkActivatesAndPublishes(t *testing.T) {
