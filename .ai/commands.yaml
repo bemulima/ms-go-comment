@@ -1,0 +1,62 @@
+schema_version: 1
+commands:
+    - name: format
+      run: gofmt -w cmd internal
+      source_path: Makefile
+      confidence: 0.98
+      requires_approval: false
+      risk: formatting
+    - name: dependencies
+      run: XDG_CACHE_HOME=$PWD/.cache GOMODCACHE=$PWD/.cache/gomod go mod download all
+      source_path: Makefile
+      confidence: 0.98
+      requires_approval: false
+      risk: dependency_state
+    - name: tidy
+      run: XDG_CACHE_HOME=$PWD/.cache GOMODCACHE=$PWD/.cache/gomod go mod tidy
+      source_path: Makefile
+      confidence: 0.98
+      requires_approval: false
+      risk: dependency_state
+    - name: install_lint
+      run: XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod GOBIN=$PWD/.cache/bin go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+      source_path: Makefile
+      confidence: 0.95
+      requires_approval: false
+      risk: dependency_state
+    - name: test
+      run: XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go test ./...
+      source_path: Taskfile.yml
+      confidence: 0.98
+      requires_approval: false
+      risk: verification
+    - name: lint
+      run: $PWD/.cache/bin/golangci-lint run ./...
+      source_path: Taskfile.yml
+      confidence: 0.95
+      requires_approval: false
+      risk: verification
+    - name: validate_contracts
+      run: make validate-contracts
+      source_path: Makefile
+      confidence: 0.98
+      requires_approval: false
+      risk: verification
+    - name: run_local
+      run: go run ./cmd/ms-comment-service
+      source_path: Taskfile.yml
+      confidence: 0.95
+      requires_approval: true
+      risk: lifecycle
+    - name: start_local_stack
+      run: docker compose up -d --build
+      source_path: Taskfile.yml
+      confidence: 0.95
+      requires_approval: true
+      risk: external_runtime
+    - name: stop_local_stack
+      run: docker compose down -v
+      source_path: Taskfile.yml
+      confidence: 0.95
+      requires_approval: true
+      risk: state_change

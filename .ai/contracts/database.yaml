@@ -1,0 +1,28 @@
+schema_version: 1
+status: design_approved_implementation_pending
+source_of_truth: docs/database-contract.md
+owned_tables:
+    - name: comment_space
+      issue: 3
+    - name: comment_thread
+      issue: 3
+    - name: comment
+      issue: 3
+    - name: comment_attachment
+      issue: 3
+    - name: comment_outbox
+      issue: 3
+    - name: comment_ws_ticket
+      issue: 3
+invariants:
+    - one thread per exact space/resource tuple
+    - reply parent and root belong to the same thread
+    - comment placement is immutable
+    - create idempotency key is unique per author
+    - mutation sequence and outbox event commit atomically
+    - attachment binding never crosses uploader or thread ownership
+    - realtime ticket preserves the optional requested last_sequence until atomic handshake consumption
+migration_policy:
+    directory: db/migrations
+    format: ordered reversible up/down pairs
+    destructive_change_requires: .ai/workflows/change-contract.yaml

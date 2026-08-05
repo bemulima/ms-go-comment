@@ -1,0 +1,36 @@
+schema_version: 1
+status: design_approved_implementation_pending
+source_of_truth: docs/websocket-contract.md
+endpoint: GET /api/v1/ws
+protocol: comment.v1
+authentication:
+    mechanism: short-lived single-use opaque ticket
+    transport: Sec-WebSocket-Protocol ticket.<opaque>
+    ticket_endpoint: POST /api/v1/realtime/ticket
+    maximum_ttl_seconds: 30
+    access_token_in_url: forbidden
+    reconnect_context: requested last_sequence is stored with the ticket and returned on atomic consumption
+server_events:
+    durable:
+        - comment.created
+        - comment.updated
+        - comment.deleted
+        - comment.hidden
+        - comment.restored
+        - attachment.ready
+        - attachment.failed
+        - thread.updated
+    ephemeral:
+        - connection.ready
+        - typing.started
+        - typing.stopped
+        - resync_required
+        - error
+        - ping
+client_events:
+    - typing.start
+    - typing.stop
+    - pong
+recovery:
+    sequence_source: comment_thread.last_sequence
+    rest_endpoint: GET /api/v1/comment/changes

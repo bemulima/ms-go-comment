@@ -1,0 +1,91 @@
+schema_version: 1
+name: ms-go-comment
+service_kind: backend_service
+repository_role: service
+repository:
+    git_url: https://github.com/bemulima/ms-go-comment.git
+    default_branch: main
+purpose: >-
+    Independent authenticated discussion service for arbitrary external resources.
+    It owns spaces, threads, multi-level comments, attachment bindings, moderation
+    state, realtime sequencing, WebSocket tickets, and outbox delivery. It does
+    not own host resources, user profiles, or binary file bytes.
+stack:
+    - name: language
+      value: go
+      confidence: 1
+      source_path: go.mod
+      explanation: go.mod is the canonical module manifest.
+    - name: framework
+      value: chi
+      confidence: 0.98
+      source_path: go.mod
+      explanation: The service declares github.com/go-chi/chi.
+    - name: container
+      value: docker
+      confidence: 0.95
+      source_path: docker/Dockerfile
+      explanation: A multi-stage Dockerfile builds the service.
+    - name: orchestration
+      value: docker_compose
+      confidence: 0.98
+      source_path: docker-compose.yml
+      explanation: Compose defines the local service and PostgreSQL dependency.
+capabilities:
+    - name: http_route
+      value: GET /healthz
+      confidence: 0.98
+      source_path: internal/adapters/http/router.go
+      explanation: The bootstrap router exposes the process health contract.
+    - name: planned_business_capability
+      value: Multi-level authenticated resource discussions
+      confidence: 0.95
+      source_path: docs/domain-map.md
+      explanation: The approved first-slice domain map defines this capability.
+    - name: planned_business_capability
+      value: Ticket-authenticated realtime WebSocket projection
+      confidence: 0.95
+      source_path: docs/websocket-contract.md
+      explanation: The approved WebSocket contract defines this capability.
+relations:
+    - name: depends_on
+      value: postgres
+      confidence: 0.95
+      source_path: docker-compose.yml
+      explanation: PostgreSQL stores service-owned domain state and outbox rows.
+    - name: depends_on
+      value: nats
+      confidence: 0.9
+      source_path: docs/realtime-delivery.md
+      explanation: NATS JetStream carries durable lifecycle events and realtime fan-out.
+    - name: depends_on
+      value: ms-go-filestorage
+      confidence: 0.9
+      source_path: docs/attachment-lifecycle.md
+      explanation: FileStorage owns attachment bytes while Comment owns authorization and binding metadata.
+    - name: receives_identity_from
+      value: ms-gateway
+      confidence: 0.95
+      source_path: docs/access-integration.md
+      explanation: Gateway is the trusted HTTP identity boundary.
+contracts:
+    - .ai/contracts/database.yaml
+    - .ai/contracts/http.yaml
+    - .ai/contracts/websocket.yaml
+    - .ai/contracts/events.yaml
+instructions:
+    - AGENTS.md
+    - prompts/git-workflow.md
+    - docs/domain-map.md
+commands:
+    - format
+    - dependencies
+    - tidy
+    - install_lint
+    - test
+    - lint
+    - validate_contracts
+workflows:
+    - .ai/workflows/implement-feature.yaml
+    - .ai/workflows/change-contract.yaml
+    - .ai/workflows/test.yaml

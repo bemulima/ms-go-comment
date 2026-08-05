@@ -1,0 +1,78 @@
+schema_version: 1
+style: clean_architecture
+entrypoints:
+    - name: ms-comment-service
+      source_path: cmd/ms-comment-service/main.go
+      responsibilities:
+        - process lifecycle
+        - dependency composition
+        - graceful shutdown
+layers:
+    - name: domain
+      source_path: internal/domain
+      responsibilities:
+        - entities and value objects
+        - invariants and stable errors
+        - repository and publisher ports
+      dependency_rule: imports no adapters
+    - name: usecase
+      source_path: internal/usecase
+      responsibilities:
+        - transaction-scoped business processes
+        - authorization policy orchestration
+        - sequence and outbox orchestration
+      dependency_rule: depends on domain ports, not concrete adapters
+    - name: http_adapter
+      source_path: internal/adapters/http
+      responsibilities:
+        - route groups and middleware
+        - request decoding and response mapping
+        - gateway identity extraction
+      dependency_rule: handlers remain thin and call use cases
+    - name: websocket_adapter
+      source_path: internal/adapters/websocket
+      responsibilities:
+        - ticket consumption
+        - connection lifecycle
+        - event projection and ephemeral messages
+      dependency_rule: does not implement durable comment mutations
+    - name: postgres_adapter
+      source_path: internal/adapters/postgres
+      responsibilities:
+        - pgx repositories
+        - transaction manager
+        - outbox claiming
+    - name: nats_adapter
+      source_path: internal/adapters/nats
+      responsibilities:
+        - JetStream publication
+        - lifecycle subscription
+        - ephemeral thread fan-out
+    - name: filestorage_adapter
+      source_path: internal/adapters/filestorage
+      responsibilities:
+        - staged upload
+        - idempotent activation and deletion
+        - signed URL requests
+domain_ownership:
+    - CommentSpace
+    - CommentThread
+    - Comment
+    - CommentAttachment
+    - OutboxEvent
+    - RealtimeTicket
+external_ownership:
+    - name: user_identity_and_profile
+      owner: ms-go-auth/ms-go-user
+      local_reference: author_id UUID without cross-database FK
+    - name: host_resource
+      owner: integrating service
+      local_reference: exact opaque space/resource tuple
+    - name: attachment_bytes
+      owner: ms-go-filestorage
+      local_reference: filestorage_id
+runtime_modes:
+    - all
+    - api
+    - realtime
+    - worker
