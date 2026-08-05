@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -212,6 +214,32 @@ func (h AdminHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, projectAdminThread(view))
 }
 
+func (h AdminHandler) HideComment(w http.ResponseWriter, r *http.Request) {
+	h.moderateComment(w, r, h.Service.HideComment)
+}
+
+func (h AdminHandler) RestoreComment(w http.ResponseWriter, r *http.Request) {
+	h.moderateComment(w, r, h.Service.RestoreComment)
+}
+
+func (h AdminHandler) moderateComment(
+	w http.ResponseWriter,
+	r *http.Request,
+	action func(context.Context, domain.Actor, uuid.UUID) (adminuc.ModerationView, error),
+) {
+	id, err := uuid.Parse(chi.URLParam(r, "commentID"))
+	if err != nil || !emptyRequestBody(r) {
+		WriteError(w, domain.ErrValidation)
+		return
+	}
+	view, err := action(r.Context(), mustActor(r), id)
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, projectModeratedComment(view))
+}
+
 func (p policyRequest) domain() domain.Policy {
 	return domain.Policy{AllowImages: p.AllowImages, AllowLinks: p.AllowLinks, MaxDepth: p.MaxDepth,
 		MaxBodyLength: p.MaxBodyLength, MaxAttachments: p.MaxAttachments, MaxImageBytes: p.MaxImageBytes, EditWindowSeconds: p.EditWindowSeconds}
@@ -234,6 +262,18 @@ func projectSpace(item domain.Space) map[string]any {
 
 func projectAdminThread(view adminuc.ThreadView) threadResponse {
 	return projectThread(commentuc.ThreadView{Thread: view.Thread, Policy: view.Policy})
+}
+
+func projectModeratedComment(view adminuc.ModerationView) commentResponse {
+	return projectComment(commentuc.CommentView{Comment: view.Comment, Attachments: view.Attachments})
+}
+
+func emptyRequestBody(r *http.Request) bool {
+	if r.Body == nil {
+		return true
+	}
+	data, err := io.ReadAll(io.LimitReader(r.Body, 1))
+	return err == nil && len(data) == 0
 }
 
 func adminPage(r *http.Request) (int, int, error) {

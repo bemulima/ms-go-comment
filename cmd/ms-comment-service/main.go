@@ -55,7 +55,10 @@ func main() {
 		SignedURLMinutes:      cfg.AttachmentSignedURLMinutes,
 		ActivationMaxAttempts: cfg.AttachmentActivationAttempts,
 	}
-	adminService := &adminuc.Service{Spaces: spaces, Threads: threads, Outbox: outbox, Tx: pgadapter.TransactionManager{Pool: pool}}
+	adminService := &adminuc.Service{
+		Spaces: spaces, Threads: threads, Comments: comments, Attachments: attachments,
+		Outbox: outbox, Tx: pgadapter.TransactionManager{Pool: pool},
+	}
 	realtimeService := &realtimeuc.TicketService{
 		Spaces: spaces, Threads: threads, Tickets: tickets,
 		TTL: time.Duration(cfg.RealtimeTicketTTLSeconds) * time.Second,
