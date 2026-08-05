@@ -94,8 +94,8 @@ type Space struct {
 }
 
 func (s Space) Validate() error {
-	if !spaceKeyPattern.MatchString(s.Key) {
-		return ErrInvalidSpaceKey
+	if err := ValidateSpaceKey(s.Key); err != nil {
+		return err
 	}
 	if s.ID == uuid.Nil || s.CreatedBy == uuid.Nil || strings.TrimSpace(s.Name) == "" {
 		return fmt.Errorf("%w: space identity, creator, and name are required", ErrValidation)
@@ -111,4 +111,11 @@ func (s Space) Validate() error {
 		}
 	}
 	return s.Policy.Validate()
+}
+
+func ValidateSpaceKey(key string) error {
+	if !spaceKeyPattern.MatchString(key) {
+		return ErrInvalidSpaceKey
+	}
+	return nil
 }

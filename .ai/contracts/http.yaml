@@ -1,5 +1,5 @@
 schema_version: 1
-status: design_approved_implementation_pending
+status: thread_and_comment_routes_implemented
 source_of_truth: docs/http-contract.md
 route_groups:
     - prefix: /api/v1
@@ -38,4 +38,27 @@ route_groups:
         - GET /thread/get-by-resource
 implemented_routes:
     - GET /healthz
+    - PUT /api/v1/thread/ensure
+    - GET /api/v1/thread/get/{threadID}
+    - GET /api/v1/comment/list
+    - GET /api/v1/comment/get/{commentID}
+    - GET /api/v1/comment/changes
+    - POST /api/v1/comment/create
+    - PUT /api/v1/comment/update/{commentID}
+    - DELETE /api/v1/comment/delete/{commentID}
+implementation:
+    router: internal/adapters/http/router.go
+    handlers: internal/adapters/http/handlers/comment.go
+    usecase: internal/usecase/comment/service.go
+    persistence: internal/adapters/postgres
+authentication:
+    headers:
+        - X-User-ID as UUID
+        - X-User-Role as non-empty non-GUEST role
+    actor_fields_in_body: rejected
+pagination:
+    default_limit: 20
+    maximum_limit: 100
+    comment_list_cursor: opaque base64url cursor scoped to thread_id and parent_id
+    changes_cursor: after_sequence
 error_contract: docs/error-contract.md

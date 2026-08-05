@@ -38,6 +38,11 @@ tasks:
     cmds:
       - make validate-contracts
 
+  migrate:
+    desc: Apply ordered PostgreSQL migrations to the local Compose database
+    cmds:
+      - make migrate
+
   up:
     desc: Start the local service and PostgreSQL
     cmds:

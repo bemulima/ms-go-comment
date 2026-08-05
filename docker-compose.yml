@@ -10,6 +10,11 @@ services:
       - "${POSTGRES_PORT:-5443}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-ms_comment}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
 
   ms-comment-service:
     container_name: ms-comment-service
@@ -24,7 +29,8 @@ services:
       FILESTORAGE_SERVICE_BASE_URL: http://ms-filestorage:8080
       SERVICE_MODE: all
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "${COMMENT_PORT:-8092}:8080"
     networks:

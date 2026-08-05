@@ -4,6 +4,11 @@
 
 Every durable mutation allocates a monotonic sequence inside its thread transaction and inserts a versioned outbox event in the same commit. A worker claims unpublished events, publishes them to NATS JetStream with `event_id` deduplication, and records success. Failures use bounded exponential backoff and remain inspectable.
 
+Thread/comment REST mutations already implement the transaction and outbox-write
+half of this flow. Broker publication, retries, and fan-out are implemented by
+the realtime slice; an unpublished row is therefore expected until that worker
+is running.
+
 Subjects are:
 
 ```text

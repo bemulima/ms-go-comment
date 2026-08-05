@@ -65,6 +65,11 @@ domain_sources:
     entities: internal/domain
     persistence_ports: internal/domain/repository
     initial_migration: db/migrations/001_init.up.sql
+implemented_adapters:
+    http: internal/adapters/http
+    postgres: internal/adapters/postgres
+implemented_usecases:
+    thread_and_comment: internal/usecase/comment/service.go
 external_ownership:
     - name: user_identity_and_profile
       owner: ms-go-auth/ms-go-user

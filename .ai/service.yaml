@@ -47,6 +47,11 @@ capabilities:
       confidence: 0.98
       source_path: db/migrations/001_init.up.sql
       explanation: Six service-owned tables and transport-neutral repository ports define persistence ownership.
+    - name: authenticated_comment_rest
+      value: Thread ensure/read and comment list/get/changes/create/update/delete
+      confidence: 0.98
+      source_path: internal/adapters/http/router.go
+      explanation: Authenticated routes call transaction-scoped comment use cases backed by pgx repositories.
     - name: planned_business_capability
       value: Ticket-authenticated realtime WebSocket projection
       confidence: 0.95
@@ -90,6 +95,7 @@ commands:
     - test
     - lint
     - validate_contracts
+    - migrate_local
 workflows:
     - .ai/workflows/implement-feature.yaml
     - .ai/workflows/change-contract.yaml

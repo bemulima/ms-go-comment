@@ -4,7 +4,7 @@
 
 ## Status
 
-The repository is in the backend foundation phase. The versioned design map is in [docs/domain-map.md](docs/domain-map.md). The initial PostgreSQL schema, domain invariants, and repository ports are implemented; REST, adapters, attachment orchestration, outbox delivery, and WebSocket runtime are tracked by GitHub issues linked to the backend epic.
+The repository is in the backend foundation phase. The versioned design map is in [docs/domain-map.md](docs/domain-map.md). The initial PostgreSQL schema, authenticated thread/comment REST API, domain use cases, pgx adapters, and transactional outbox writes are implemented. Attachment transport, outbox delivery, and WebSocket runtime remain tracked by the backend epic.
 
 ## Architecture
 
@@ -23,6 +23,7 @@ The repository is in the backend foundation phase. The versioned design map is i
 
 ```sh
 task test
+task migrate
 task run
 task up
 make validate-contracts

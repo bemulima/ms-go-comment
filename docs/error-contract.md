@@ -30,5 +30,6 @@ Initial stable codes include:
 | `invalid_comment_content` | 422 | Content/attachments violate the contract |
 | `rate_limited` | 429 | Actor or connection limit exceeded |
 | `realtime_ticket_invalid` | 401 | Ticket is absent, expired, or already consumed |
+| `internal_error` | 500 | Unexpected server-side failure; details are not exposed |
 
 WebSocket `error` frames use the same code vocabulary and include a client request ID when applicable. Internal error text and SQL/FileStorage/NATS details are logged but not exposed to untrusted clients.
