@@ -19,12 +19,23 @@ const (
 )
 
 type Service struct {
-	Spaces  repository.SpaceRepository
-	Threads repository.ThreadRepository
-	Outbox  repository.OutboxRepository
-	Tx      repository.TransactionManager
-	Now     func() time.Time
-	NewID   func() uuid.UUID
+	Spaces      repository.SpaceRepository
+	Threads     repository.ThreadRepository
+	Comments    moderationCommentRepository
+	Attachments moderationAttachmentRepository
+	Outbox      repository.OutboxRepository
+	Tx          repository.TransactionManager
+	Now         func() time.Time
+	NewID       func() uuid.UUID
+}
+
+type moderationCommentRepository interface {
+	GetByIDForUpdate(context.Context, uuid.UUID) (domain.Comment, error)
+	UpdateModerationStatus(context.Context, domain.Comment, domain.CommentStatus, int) error
+}
+
+type moderationAttachmentRepository interface {
+	ListByComment(context.Context, uuid.UUID, uuid.UUID) ([]domain.Attachment, error)
 }
 
 type CreateSpaceInput struct {
@@ -53,6 +64,11 @@ type UpdateThreadInput struct {
 type ThreadView struct {
 	Thread domain.Thread
 	Policy domain.Policy
+}
+
+type ModerationView struct {
+	Comment     domain.Comment
+	Attachments []domain.Attachment
 }
 
 func (s Service) CreateSpace(ctx context.Context, actor domain.Actor, in CreateSpaceInput) (domain.Space, error) {
@@ -209,6 +225,117 @@ func (s Service) UpdateThread(ctx context.Context, actor domain.Actor, in Update
 		return nil
 	})
 	return result, err
+}
+
+func (s Service) HideComment(ctx context.Context, actor domain.Actor, id uuid.UUID) (ModerationView, error) {
+	return s.moderateComment(ctx, actor, id, domain.CommentStatusHidden, domain.EventCommentHidden)
+}
+
+func (s Service) RestoreComment(ctx context.Context, actor domain.Actor, id uuid.UUID) (ModerationView, error) {
+	return s.moderateComment(ctx, actor, id, domain.CommentStatusActive, domain.EventCommentRestored)
+}
+
+func (s Service) moderateComment(
+	ctx context.Context,
+	actor domain.Actor,
+	id uuid.UUID,
+	target domain.CommentStatus,
+	subject domain.EventSubject,
+) (ModerationView, error) {
+	if err := requireAdminRead(actor); err != nil {
+		return ModerationView{}, err
+	}
+	if id == uuid.Nil || (target != domain.CommentStatusHidden && target != domain.CommentStatusActive) {
+		return ModerationView{}, fmt.Errorf("%w: invalid moderation target", domain.ErrValidation)
+	}
+
+	var result ModerationView
+	err := s.Tx.WithinTransaction(ctx, func(txCtx context.Context) error {
+		item, err := s.Comments.GetByIDForUpdate(txCtx, id)
+		if err != nil {
+			return mapNotFound(err, domain.ErrCommentNotFound)
+		}
+		thread, err := s.Threads.GetByID(txCtx, item.ThreadID)
+		if err != nil {
+			return mapNotFound(err, domain.ErrThreadNotFound)
+		}
+		if _, err := s.Spaces.GetByID(txCtx, thread.SpaceID); err != nil {
+			return mapNotFound(err, domain.ErrSpaceNotFound)
+		}
+		if item.Status == domain.CommentStatusDeleted {
+			return domain.ErrModerationConflict
+		}
+		attachments, err := s.Attachments.ListByComment(txCtx, item.ThreadID, item.ID)
+		if err != nil {
+			return err
+		}
+		if item.Status == target {
+			result = ModerationView{Comment: item, Attachments: attachments}
+			return nil
+		}
+		expectedStatus, expectedVersion := item.Status, item.Version
+		sequence, err := s.Threads.NextSequenceAnyState(txCtx, item.ThreadID)
+		if err != nil {
+			return mapNotFound(err, domain.ErrThreadNotFound)
+		}
+		now := s.now()
+		item.Status, item.Version, item.Sequence, item.UpdatedAt = target, item.Version+1, sequence, now
+		if err := s.Comments.UpdateModerationStatus(txCtx, item, expectedStatus, expectedVersion); err != nil {
+			return err
+		}
+		if err := s.addModerationOutbox(txCtx, item, attachments, subject, actor.UserID, now); err != nil {
+			return err
+		}
+		result = ModerationView{Comment: item, Attachments: attachments}
+		return nil
+	})
+	return result, err
+}
+
+func (s Service) addModerationOutbox(
+	ctx context.Context,
+	item domain.Comment,
+	attachments []domain.Attachment,
+	subject domain.EventSubject,
+	actorID uuid.UUID,
+	now time.Time,
+) error {
+	eventID := s.newID()
+	payload := map[string]any{
+		"schema_version": 1, "event_id": eventID, "occurred_at": now,
+		"thread_id": item.ThreadID, "sequence": item.Sequence, "comment_id": item.ID,
+		"parent_id": item.ParentID, "root_id": item.RootID, "actor_id": actorID,
+		"author_id": item.AuthorID, "status": item.Status, "version": item.Version,
+		"direct_replies_count": item.DirectRepliesCount,
+	}
+	if subject == domain.EventCommentRestored {
+		payload["body"], payload["links"] = item.Body, item.Links
+		payload["attachments"] = attachmentPayload(attachments)
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	event := domain.OutboxEvent{
+		ID: eventID, AggregateType: "comment", AggregateID: item.ID,
+		Subject: subject, SchemaVersion: 1, Payload: encoded,
+		NextAttemptAt: now, CreatedAt: now,
+	}
+	if err := event.Validate(); err != nil {
+		return err
+	}
+	return s.Outbox.Add(ctx, event)
+}
+
+func attachmentPayload(items []domain.Attachment) []map[string]any {
+	result := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		result = append(result, map[string]any{
+			"id": item.ID, "status": item.Status, "mime_type": item.MIMEType,
+			"size_bytes": item.SizeBytes, "width": item.Width, "height": item.Height,
+		})
+	}
+	return result
 }
 
 func policyPayload(policy domain.Policy) map[string]any {
