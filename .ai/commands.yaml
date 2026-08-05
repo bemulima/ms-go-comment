@@ -1,7 +1,7 @@
 schema_version: 1
 commands:
     - name: format
-      run: gofmt -w cmd internal
+      run: gofmt -w cmd internal test
       source_path: Makefile
       confidence: 0.98
       requires_approval: false

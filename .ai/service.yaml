@@ -40,8 +40,13 @@ capabilities:
     - name: planned_business_capability
       value: Multi-level authenticated resource discussions
       confidence: 0.95
-      source_path: docs/domain-map.md
-      explanation: The approved first-slice domain map defines this capability.
+      source_path: internal/domain/comment.go
+      explanation: Domain placement and content rules implement the backend model independently of adapters.
+    - name: persistence_contract
+      value: PostgreSQL schema and clean repository ports
+      confidence: 0.98
+      source_path: db/migrations/001_init.up.sql
+      explanation: Six service-owned tables and transport-neutral repository ports define persistence ownership.
     - name: planned_business_capability
       value: Ticket-authenticated realtime WebSocket projection
       confidence: 0.95
