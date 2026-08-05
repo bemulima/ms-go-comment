@@ -1,8 +1,9 @@
 schema_version: 1
-status: thread_comment_attachment_and_realtime_ticket_routes_implemented
+status: user_and_realtime_routes_implemented_admin_and_internal_deferred
 source_of_truth: docs/http-contract.md
 route_groups:
     - prefix: /api/v1
+      status: implemented
       authentication: required gateway identity
       routes:
         - PUT /thread/ensure
@@ -19,6 +20,7 @@ route_groups:
         - POST /realtime/ticket
         - GET /ws
     - prefix: /admin/v1
+      status: deferred
       authentication: ADMIN or MODERATOR for writes
       routes:
         - POST /space/create
@@ -31,6 +33,7 @@ route_groups:
         - PUT /comment/hide/{commentID}
         - PUT /comment/restore/{commentID}
     - prefix: /internal/v1
+      status: deferred
       authentication: X-Internal-Token
       routes:
         - POST /access-grant/create

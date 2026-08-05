@@ -2,6 +2,9 @@
 
 This document is the entrypoint for every agent and developer changing `ms-go-comment`.
 
+The implementation-status and change-routing summary is in
+[agent-contract-map.md](agent-contract-map.md).
+
 ## Service boundary
 
 The service owns authenticated discussions attached to opaque external resources. It does not own users, courses, lessons, products, articles, or page authorization rules.
@@ -66,5 +69,6 @@ Database transaction
 - [realtime-delivery.md](realtime-delivery.md)
 - [access-integration.md](access-integration.md)
 - [error-contract.md](error-contract.md)
+- [agent-contract-map.md](agent-contract-map.md)
 
 The matching machine-readable evidence lives in `.ai/contracts`.
