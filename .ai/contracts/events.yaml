@@ -1,0 +1,27 @@
+schema_version: 1
+status: design_approved_implementation_pending
+source_of_truth: docs/realtime-delivery.md
+delivery:
+    durable_transport: NATS JetStream
+    persistence_boundary: PostgreSQL transactional outbox
+    semantics: at-least-once
+    deduplication_key: event_id
+subjects:
+    - comment.created
+    - comment.updated
+    - comment.deleted
+    - comment.hidden
+    - comment.restored
+    - comment.attachment.ready
+    - comment.attachment.failed
+    - comment.thread.updated
+required_envelope_fields:
+    - schema_version
+    - event_id
+    - occurred_at
+    - thread_id
+    - sequence
+consumer_rules:
+    - deduplicate by event_id
+    - apply comment state by sequence and version
+    - reconcile gaps through GET /api/v1/comment/changes

@@ -1,0 +1,41 @@
+schema_version: 1
+status: design_approved_implementation_pending
+source_of_truth: docs/http-contract.md
+route_groups:
+    - prefix: /api/v1
+      authentication: required gateway identity
+      routes:
+        - PUT /thread/ensure
+        - GET /thread/get/{threadID}
+        - GET /comment/list
+        - GET /comment/get/{commentID}
+        - GET /comment/changes
+        - POST /comment/create
+        - PUT /comment/update/{commentID}
+        - DELETE /comment/delete/{commentID}
+        - POST /comment-attachment/upload
+        - GET /comment-attachment/signed-url/{attachmentID}
+        - DELETE /comment-attachment/delete/{attachmentID}
+        - POST /realtime/ticket
+        - GET /ws
+    - prefix: /admin/v1
+      authentication: ADMIN or MODERATOR for writes
+      routes:
+        - POST /space/create
+        - GET /space/get/{spaceID}
+        - GET /space/list
+        - PUT /space/update/{spaceID}
+        - DELETE /space/delete/{spaceID}
+        - GET /thread/list
+        - PUT /thread/update/{threadID}
+        - PUT /comment/hide/{commentID}
+        - PUT /comment/restore/{commentID}
+    - prefix: /internal/v1
+      authentication: X-Internal-Token
+      routes:
+        - POST /access-grant/create
+        - POST /thread/ensure
+        - GET /thread/get-by-resource
+implemented_routes:
+    - GET /healthz
+error_contract: docs/error-contract.md
