@@ -1,5 +1,5 @@
 schema_version: 1
-status: design_approved_implementation_pending
+status: transactional_outbox_write_implemented_delivery_pending
 source_of_truth: docs/realtime-delivery.md
 delivery:
     durable_transport: NATS JetStream
@@ -25,3 +25,5 @@ consumer_rules:
     - deduplicate by event_id
     - apply comment state by sequence and version
     - reconcile gaps through GET /api/v1/comment/changes
+producer_source: internal/usecase/comment/service.go
+outbox_repository: internal/adapters/postgres/outbox_repository.go

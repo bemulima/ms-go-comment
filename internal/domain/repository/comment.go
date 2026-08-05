@@ -28,8 +28,10 @@ type CommentChangeQuery struct {
 
 type CommentRepository interface {
 	Create(ctx context.Context, comment domain.Comment) error
-	GetByID(ctx context.Context, threadID, commentID uuid.UUID) (domain.Comment, error)
+	GetByID(ctx context.Context, commentID uuid.UUID) (domain.Comment, error)
+	GetByIDForUpdate(ctx context.Context, commentID uuid.UUID) (domain.Comment, error)
 	GetByIdempotencyKey(ctx context.Context, authorID, key uuid.UUID) (domain.Comment, error)
+	LockIdempotencyKey(ctx context.Context, authorID, key uuid.UUID) error
 	List(ctx context.Context, query CommentListQuery) ([]domain.Comment, error)
 	ListChanges(ctx context.Context, query CommentChangeQuery) ([]domain.Comment, error)
 	UpdateContent(ctx context.Context, comment domain.Comment, expectedVersion int) error

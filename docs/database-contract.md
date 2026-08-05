@@ -65,5 +65,6 @@ include `read`. Only the 32-byte SHA-256 ticket hash is persisted.
 
 The matching entities, value objects, validation rules, and stable errors live
 in `internal/domain`. Persistence contracts live in `internal/domain/repository`
-and expose no pgx or SQL types. Concrete PostgreSQL implementations arrive in a
-later slice without changing these ownership boundaries.
+and expose no pgx or SQL types. Concrete pgx implementations live in
+`internal/adapters/postgres`; a context-bound transaction manager makes sequence,
+counters, comment state, attachment binding, and outbox insertion one commit.

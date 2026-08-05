@@ -42,6 +42,12 @@ commands:
       confidence: 0.98
       requires_approval: false
       risk: verification
+    - name: migrate_local
+      run: make migrate
+      source_path: Makefile
+      confidence: 0.98
+      requires_approval: true
+      risk: database_change
     - name: run_local
       run: go run ./cmd/ms-comment-service
       source_path: Taskfile.yml

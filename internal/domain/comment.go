@@ -3,11 +3,17 @@ package domain
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+)
+
+var (
+	rawHTMLPattern  = regexp.MustCompile(`(?i)<\s*/?\s*[a-z!][^>]*>`)
+	httpLinkPattern = regexp.MustCompile(`(?i)https?://[^\s<>()]+`)
 )
 
 type CommentStatus int16
@@ -23,15 +29,36 @@ func (s CommentStatus) Valid() bool {
 }
 
 type Link struct {
-	URL   string
-	Title string
+	URL   string `json:"url"`
+	Title string `json:"title,omitempty"`
 }
 
 type CommentContent struct {
-	Body            string
-	Links           []Link
-	AttachmentCount int
-	ContainsRawHTML bool
+	Body                    string
+	Links                   []Link
+	AttachmentCount         int
+	ExistingAttachmentCount int
+	ContainsRawHTML         bool
+}
+
+func AnalyzeCommentContent(body string, attachmentCount int) CommentContent {
+	matches := httpLinkPattern.FindAllString(body, -1)
+	links := make([]Link, 0, len(matches))
+	seen := make(map[string]struct{}, len(matches))
+	for _, match := range matches {
+		candidate := strings.TrimRight(match, `.,;:!?)]}`)
+		if _, ok := seen[candidate]; ok {
+			continue
+		}
+		seen[candidate] = struct{}{}
+		links = append(links, Link{URL: candidate})
+	}
+	return CommentContent{
+		Body:            body,
+		Links:           links,
+		AttachmentCount: attachmentCount,
+		ContainsRawHTML: rawHTMLPattern.MatchString(body),
+	}
 }
 
 func (c CommentContent) Validate(policy Policy) error {
@@ -49,17 +76,17 @@ func (c CommentContent) Validate(policy Policy) error {
 	}
 	for _, link := range c.Links {
 		parsed, err := url.ParseRequestURI(link.URL)
-		if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		if err != nil || parsed.Host == "" || (!strings.EqualFold(parsed.Scheme, "http") && !strings.EqualFold(parsed.Scheme, "https")) {
 			return fmt.Errorf("%w: link must be an absolute HTTP(S) URL", ErrInvalidCommentContent)
 		}
 	}
-	if c.AttachmentCount < 0 || c.AttachmentCount > int(policy.MaxAttachments) {
+	if c.AttachmentCount < 0 || c.ExistingAttachmentCount < 0 || c.AttachmentCount > int(policy.MaxAttachments) {
 		return fmt.Errorf("%w: attachment count is outside policy", ErrInvalidCommentContent)
 	}
 	if c.AttachmentCount > 0 && !policy.AllowImages {
 		return ErrImagesDisabled
 	}
-	if strings.TrimSpace(c.Body) == "" && c.AttachmentCount == 0 {
+	if strings.TrimSpace(c.Body) == "" && c.AttachmentCount+c.ExistingAttachmentCount == 0 {
 		return fmt.Errorf("%w: body or attachment is required", ErrInvalidCommentContent)
 	}
 	return nil

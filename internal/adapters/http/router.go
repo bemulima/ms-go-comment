@@ -4,16 +4,34 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/bemulima/ms-go-comment/internal/adapters/http/handlers"
+	httpmw "github.com/bemulima/ms-go-comment/internal/adapters/http/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
-// NewRouter builds the service HTTP boundary. Business route groups are added
-// by feature issues without changing the process health contract.
-func NewRouter() http.Handler {
+type RouterDependencies struct {
+	CommentService handlers.CommentService
+}
+
+func NewRouter(deps RouterDependencies) http.Handler {
 	router := chi.NewRouter()
 	router.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "ms-go-comment"})
 	})
+	if deps.CommentService != nil {
+		handler := handlers.CommentHandler{Service: deps.CommentService}
+		router.Route("/api/v1", func(api chi.Router) {
+			api.Use(httpmw.RequireActor(handlers.WriteError))
+			api.Put("/thread/ensure", handler.EnsureThread)
+			api.Get("/thread/get/{threadID}", handler.GetThread)
+			api.Get("/comment/list", handler.ListComments)
+			api.Get("/comment/get/{commentID}", handler.GetComment)
+			api.Get("/comment/changes", handler.ListChanges)
+			api.Post("/comment/create", handler.CreateComment)
+			api.Put("/comment/update/{commentID}", handler.UpdateComment)
+			api.Delete("/comment/delete/{commentID}", handler.DeleteComment)
+		})
+	}
 	router.NotFound(func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found", "message": "route not found"})
 	})

@@ -136,6 +136,7 @@ func TestCommentContentValidation(t *testing.T) {
 		{name: "links disabled", policy: withLinks(base, false), content: domain.CommentContent{Body: "docs", Links: []domain.Link{{URL: "https://example.com"}}}, wantErr: domain.ErrLinksDisabled},
 		{name: "images disabled", policy: base, content: domain.CommentContent{AttachmentCount: 1}, wantErr: domain.ErrImagesDisabled},
 		{name: "image only", policy: withImages(base, true), content: domain.CommentContent{AttachmentCount: 1}},
+		{name: "existing image survives disabled policy", policy: base, content: domain.CommentContent{ExistingAttachmentCount: 1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -147,6 +148,20 @@ func TestCommentContentValidation(t *testing.T) {
 				t.Fatalf("Validate() error = %v, want %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestAnalyzeCommentContent(t *testing.T) {
+	t.Parallel()
+
+	content := domain.AnalyzeCommentContent(
+		"See HTTPS://example.com/docs, duplicate HTTPS://example.com/docs and <script>alert(1)</script>", 2,
+	)
+	if !content.ContainsRawHTML {
+		t.Fatal("raw HTML was not detected")
+	}
+	if content.AttachmentCount != 2 || len(content.Links) != 1 || content.Links[0].URL != "HTTPS://example.com/docs" {
+		t.Fatalf("unexpected analyzed content: %#v", content)
 	}
 }
 

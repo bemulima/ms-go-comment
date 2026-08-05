@@ -10,7 +10,9 @@ import (
 	"time"
 
 	httpadapter "github.com/bemulima/ms-go-comment/internal/adapters/http"
+	pgadapter "github.com/bemulima/ms-go-comment/internal/adapters/postgres"
 	"github.com/bemulima/ms-go-comment/internal/config"
+	commentuc "github.com/bemulima/ms-go-comment/internal/usecase/comment"
 	"go.uber.org/zap"
 )
 
@@ -26,9 +28,26 @@ func main() {
 	}
 	defer func() { _ = logger.Sync() }()
 
+	rootContext := context.Background()
+	pool, err := pgadapter.Connect(rootContext, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("database error: %v", err)
+	}
+	defer pool.Close()
+
+	spaces := pgadapter.SpaceRepository{Pool: pool}
+	threads := pgadapter.ThreadRepository{Pool: pool}
+	comments := pgadapter.CommentRepository{Pool: pool}
+	attachments := pgadapter.AttachmentRepository{Pool: pool}
+	outbox := pgadapter.OutboxRepository{Pool: pool}
+	commentService := &commentuc.Service{
+		Spaces: spaces, Threads: threads, Comments: comments, Attachments: attachments,
+		Outbox: outbox, Tx: pgadapter.TransactionManager{Pool: pool},
+	}
+
 	server := &http.Server{
 		Addr:              ":" + cfg.HTTPPort,
-		Handler:           httpadapter.NewRouter(),
+		Handler:           httpadapter.NewRouter(httpadapter.RouterDependencies{CommentService: commentService}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

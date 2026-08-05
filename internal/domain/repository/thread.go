@@ -16,4 +16,5 @@ type ThreadRepository interface {
 	Update(ctx context.Context, thread domain.Thread) error
 	// NextSequence locks the thread row and returns its next durable sequence.
 	NextSequence(ctx context.Context, threadID uuid.UUID) (int64, error)
+	RecordCommentCreated(ctx context.Context, threadID uuid.UUID, root bool) error
 }
