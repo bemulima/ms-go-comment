@@ -1,7 +1,7 @@
 .PHONY: fmt deps tidy test lint validate-contracts up down
 
 fmt:
-	gofmt -w cmd internal
+	gofmt -w cmd internal test
 
 deps:
 	XDG_CACHE_HOME=$(CURDIR)/.cache GOMODCACHE=$(CURDIR)/.cache/gomod go mod download all

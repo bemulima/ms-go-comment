@@ -1,0 +1,38 @@
+package repository
+
+import (
+	"context"
+	"time"
+
+	"github.com/bemulima/ms-go-comment/internal/domain"
+	"github.com/google/uuid"
+)
+
+type CommentCursor struct {
+	CreatedAt time.Time
+	ID        uuid.UUID
+}
+
+type CommentListQuery struct {
+	ThreadID uuid.UUID
+	ParentID *uuid.UUID
+	After    *CommentCursor
+	Limit    int
+}
+
+type CommentChangeQuery struct {
+	ThreadID      uuid.UUID
+	AfterSequence int64
+	Limit         int
+}
+
+type CommentRepository interface {
+	Create(ctx context.Context, comment domain.Comment) error
+	GetByID(ctx context.Context, threadID, commentID uuid.UUID) (domain.Comment, error)
+	GetByIdempotencyKey(ctx context.Context, authorID, key uuid.UUID) (domain.Comment, error)
+	List(ctx context.Context, query CommentListQuery) ([]domain.Comment, error)
+	ListChanges(ctx context.Context, query CommentChangeQuery) ([]domain.Comment, error)
+	UpdateContent(ctx context.Context, comment domain.Comment, expectedVersion int) error
+	MarkDeleted(ctx context.Context, comment domain.Comment, expectedVersion int) error
+	IncrementReplyCount(ctx context.Context, threadID, commentID uuid.UUID) error
+}

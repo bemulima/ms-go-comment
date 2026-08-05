@@ -6,7 +6,7 @@ tasks:
   fmt:
     desc: Format Go source
     cmds:
-      - gofmt -w cmd internal
+      - gofmt -w cmd internal test
 
   deps:
     desc: Download Go modules into the repository-local cache

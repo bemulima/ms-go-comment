@@ -61,6 +61,10 @@ domain_ownership:
     - CommentAttachment
     - OutboxEvent
     - RealtimeTicket
+domain_sources:
+    entities: internal/domain
+    persistence_ports: internal/domain/repository
+    initial_migration: db/migrations/001_init.up.sql
 external_ownership:
     - name: user_identity_and_profile
       owner: ms-go-auth/ms-go-user
