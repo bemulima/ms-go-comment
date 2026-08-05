@@ -11,6 +11,7 @@ import (
 
 type RouterDependencies struct {
 	CommentService   handlers.CommentService
+	AdminService     handlers.AdminService
 	RealtimeService  handlers.RealtimeService
 	WebSocketHandler http.Handler
 }
@@ -40,6 +41,19 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	if deps.RealtimeService != nil {
 		handler := handlers.RealtimeHandler{Service: deps.RealtimeService}
 		router.With(httpmw.RequireActor(handlers.WriteError)).Post("/api/v1/realtime/ticket", handler.MintTicket)
+	}
+	if deps.AdminService != nil {
+		handler := handlers.AdminHandler{Service: deps.AdminService}
+		router.Route("/admin/v1", func(admin chi.Router) {
+			admin.Use(httpmw.RequireActor(handlers.WriteError))
+			admin.Post("/space/create", handler.CreateSpace)
+			admin.Get("/space/get/{spaceID}", handler.GetSpace)
+			admin.Get("/space/list", handler.ListSpaces)
+			admin.Put("/space/update/{spaceID}", handler.UpdateSpace)
+			admin.Delete("/space/delete/{spaceID}", handler.DisableSpace)
+			admin.Get("/thread/list", handler.ListThreads)
+			admin.Put("/thread/update/{threadID}", handler.UpdateThread)
+		})
 	}
 	if deps.WebSocketHandler != nil {
 		router.Handle("/api/v1/ws", deps.WebSocketHandler)
