@@ -43,6 +43,8 @@ func errorContract(err error) (int, string, string) {
 		return http.StatusConflict, "thread_not_writable", "comment thread is not writable"
 	case errors.Is(err, domain.ErrEditConflict):
 		return http.StatusConflict, "comment_edit_conflict", "comment was changed by another request"
+	case errors.Is(err, domain.ErrModerationConflict):
+		return http.StatusConflict, "comment_moderation_conflict", "comment cannot perform the requested moderation transition"
 	case errors.Is(err, domain.ErrIdempotencyConflict):
 		return http.StatusConflict, "idempotency_conflict", "idempotency key was reused with different input"
 	case errors.Is(err, domain.ErrConflict):

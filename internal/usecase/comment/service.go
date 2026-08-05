@@ -159,7 +159,7 @@ func (s Service) ListChanges(ctx context.Context, actor domain.Actor, query repo
 	if err != nil {
 		return nil, err
 	}
-	return s.views(ctx, comments)
+	return s.changeViews(ctx, comments)
 }
 
 func (s Service) CreateComment(ctx context.Context, actor domain.Actor, in CreateCommentInput) (CreateCommentResult, error) {
@@ -434,6 +434,24 @@ func (s Service) views(ctx context.Context, comments []domain.Comment) ([]Commen
 	result := make([]CommentView, 0, len(comments))
 	for _, item := range comments {
 		if item.Status == domain.CommentStatusHidden {
+			continue
+		}
+		attachments, err := s.Attachments.ListByComment(ctx, item.ThreadID, item.ID)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, CommentView{Comment: item, Attachments: attachments})
+	}
+	return result, nil
+}
+
+func (s Service) changeViews(ctx context.Context, comments []domain.Comment) ([]CommentView, error) {
+	result := make([]CommentView, 0, len(comments))
+	for _, item := range comments {
+		if item.Status == domain.CommentStatusHidden {
+			item.Body = ""
+			item.Links = []domain.Link{}
+			result = append(result, CommentView{Comment: item, Attachments: []domain.Attachment{}})
 			continue
 		}
 		attachments, err := s.Attachments.ListByComment(ctx, item.ThreadID, item.ID)

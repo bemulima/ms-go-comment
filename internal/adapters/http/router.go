@@ -53,6 +53,8 @@ func NewRouter(deps RouterDependencies) http.Handler {
 			admin.Delete("/space/delete/{spaceID}", handler.DisableSpace)
 			admin.Get("/thread/list", handler.ListThreads)
 			admin.Put("/thread/update/{threadID}", handler.UpdateThread)
+			admin.Put("/comment/hide/{commentID}", handler.HideComment)
+			admin.Put("/comment/restore/{commentID}", handler.RestoreComment)
 		})
 	}
 	if deps.WebSocketHandler != nil {

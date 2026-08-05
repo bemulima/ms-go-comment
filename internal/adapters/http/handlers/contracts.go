@@ -18,6 +18,8 @@ type AdminService interface {
 	DisableSpace(context.Context, domain.Actor, uuid.UUID) (domain.Space, error)
 	ListThreads(context.Context, domain.Actor, repository.ThreadListQuery) ([]adminuc.ThreadView, error)
 	UpdateThread(context.Context, domain.Actor, adminuc.UpdateThreadInput) (adminuc.ThreadView, error)
+	HideComment(context.Context, domain.Actor, uuid.UUID) (adminuc.ModerationView, error)
+	RestoreComment(context.Context, domain.Actor, uuid.UUID) (adminuc.ModerationView, error)
 }
 
 type CommentService interface {

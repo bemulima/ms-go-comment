@@ -35,11 +35,12 @@ Lesson, Product, Article, Page, or User rows.
 | Durable delivery | background outbox dispatcher | Finite lease, JetStream `event_id` deduplication, bounded retry evidence |
 | Attachment cleanup | background worker | Idempotent activation/deletion and explicit ready/failed/deleted states |
 | Admin configuration | `/admin/v1/space/*`, `/admin/v1/thread/*` | ADMIN writes; ADMIN/MODERATOR reads; space delete is soft-disable |
+| Comment moderation | `/admin/v1/comment/hide/*`, `/admin/v1/comment/restore/*` | ADMIN/MODERATOR; idempotent transitions; redacted hide event |
 
 Gateway-facing routes are `/api/comment/v1/*`. Student REST rewrites to
 `/api/v1/*`; the exact `/api/comment/v1/ws` route preserves Origin, upgrade, and
 subprotocol headers without bearer authentication. The admin gateway rewrite to
-`/admin/v1/*` exposes configuration administration; moderation remains deferred.
+`/admin/v1/*` exposes configuration administration and comment moderation.
 
 ## Business rules
 
@@ -79,7 +80,6 @@ names shorten the last three to `attachment.ready`, `attachment.failed`, and
 
 These contracts are designed but are not registered in the current router:
 
-- `/admin/v1/comment`: hide/restore moderation and its event-producing transaction;
 - `/internal/v1`: context access grants and trusted host-service thread lookup;
 - rate limiting beyond the implemented per-user WebSocket connection bound;
 - production observability dashboards and multi-instance load validation.

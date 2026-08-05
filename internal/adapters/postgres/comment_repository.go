@@ -116,6 +116,25 @@ WHERE id=$6 AND version=$7 AND status=1`, item.Status, item.Version, item.Sequen
 	return nil
 }
 
+func (r CommentRepository) UpdateModerationStatus(
+	ctx context.Context,
+	item domain.Comment,
+	expectedStatus domain.CommentStatus,
+	expectedVersion int,
+) error {
+	command, err := runner(ctx, r.Pool).Exec(ctx, `UPDATE comment SET
+status=$1, version=$2, sequence=$3, updated_at=$4
+WHERE id=$5 AND status=$6 AND version=$7`, item.Status, item.Version, item.Sequence,
+		item.UpdatedAt, item.ID, expectedStatus, expectedVersion)
+	if err != nil {
+		return mapError(err)
+	}
+	if command.RowsAffected() == 0 {
+		return domain.ErrModerationConflict
+	}
+	return nil
+}
+
 func (r CommentRepository) IncrementReplyCount(ctx context.Context, threadID, commentID uuid.UUID) error {
 	command, err := runner(ctx, r.Pool).Exec(ctx, `UPDATE comment
 SET direct_replies_count=direct_replies_count+1, updated_at=NOW()

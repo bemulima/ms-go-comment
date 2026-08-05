@@ -2,6 +2,7 @@ package admin_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -85,23 +86,101 @@ func TestService_ThreadListAndUpdatePolicy(t *testing.T) {
 	}
 }
 
+func TestService_ModeratesCommentsTransactionally(t *testing.T) {
+	t.Parallel()
+
+	service, store, admin, moderator := fixture()
+	space := domain.Space{ID: uuid.New(), Key: "course", Name: "Course", Status: domain.SpaceStatusActive,
+		AccessMode: domain.AccessModeAuthenticated, Policy: domain.DefaultPolicy(), CreatedBy: admin.UserID,
+		CreatedAt: service.Now(), UpdatedAt: service.Now()}
+	thread := domain.Thread{ID: uuid.New(), SpaceID: space.ID, Resource: domain.ResourceReference{Type: "lesson", ID: "lesson-1"},
+		Status: domain.ThreadStatusOpen, CreatedAt: service.Now(), UpdatedAt: service.Now()}
+	commentID := uuid.New()
+	comment := domain.Comment{ID: commentID, ThreadID: thread.ID, AuthorID: uuid.New(), RootID: commentID,
+		Path: []uuid.UUID{commentID}, Body: "visible https://example.com", Links: []domain.Link{{URL: "https://example.com"}},
+		Status: domain.CommentStatusActive, Version: 1, IdempotencyKey: uuid.New(), CreatedAt: service.Now(), UpdatedAt: service.Now()}
+	attachmentID := uuid.New()
+	store.spaces[space.ID], store.threads[thread.ID], store.comments[comment.ID] = space, thread, comment
+	store.attachments[attachmentID] = domain.Attachment{ID: attachmentID, ThreadID: thread.ID, CommentID: &commentID,
+		UploaderID: comment.AuthorID, FileStorageID: uuid.New(), Status: domain.AttachmentStatusReady, MIMEType: "image/png"}
+
+	hidden, err := service.HideComment(context.Background(), moderator, comment.ID)
+	if err != nil || hidden.Comment.Status != domain.CommentStatusHidden || hidden.Comment.Version != 2 ||
+		hidden.Comment.Sequence != 1 || len(hidden.Attachments) != 1 || len(store.outbox) != 1 {
+		t.Fatalf("HideComment() = %#v, outbox=%d error=%v", hidden, len(store.outbox), err)
+	}
+	assertPayloadFields(t, store.outbox[0], domain.EventCommentHidden, false)
+	if _, err := service.HideComment(context.Background(), moderator, comment.ID); err != nil || len(store.outbox) != 1 || store.threads[thread.ID].LastSequence != 1 {
+		t.Fatalf("idempotent hide sequence=%d outbox=%d error=%v", store.threads[thread.ID].LastSequence, len(store.outbox), err)
+	}
+
+	restored, err := service.RestoreComment(context.Background(), admin, comment.ID)
+	if err != nil || restored.Comment.Status != domain.CommentStatusActive || restored.Comment.Version != 3 ||
+		restored.Comment.Sequence != 2 || len(store.outbox) != 2 {
+		t.Fatalf("RestoreComment() = %#v, outbox=%d error=%v", restored, len(store.outbox), err)
+	}
+	assertPayloadFields(t, store.outbox[1], domain.EventCommentRestored, true)
+	if _, err := service.RestoreComment(context.Background(), admin, comment.ID); err != nil || len(store.outbox) != 2 || store.threads[thread.ID].LastSequence != 2 {
+		t.Fatalf("idempotent restore sequence=%d outbox=%d error=%v", store.threads[thread.ID].LastSequence, len(store.outbox), err)
+	}
+	if _, err := service.HideComment(context.Background(), domain.Actor{UserID: uuid.New(), Role: "STUDENT"}, comment.ID); !errors.Is(err, domain.ErrForbidden) {
+		t.Fatalf("student moderation error=%v", err)
+	}
+
+	comment = store.comments[comment.ID]
+	comment.Status = domain.CommentStatusDeleted
+	store.comments[comment.ID] = comment
+	if _, err := service.RestoreComment(context.Background(), moderator, comment.ID); !errors.Is(err, domain.ErrModerationConflict) {
+		t.Fatalf("deleted moderation error=%v", err)
+	}
+}
+
+func assertPayloadFields(t *testing.T, event domain.OutboxEvent, subject domain.EventSubject, restored bool) {
+	t.Helper()
+	if event.Subject != subject {
+		t.Fatalf("subject=%s want=%s", event.Subject, subject)
+	}
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"body", "links", "attachments"} {
+		_, exists := payload[field]
+		if exists != restored {
+			t.Fatalf("payload field %q exists=%v restored=%v payload=%s", field, exists, restored, event.Payload)
+		}
+	}
+	if restored {
+		var body string
+		if err := json.Unmarshal(payload["body"], &body); err != nil || body != "visible https://example.com" {
+			t.Fatalf("restored body=%q error=%v payload=%s", body, err, event.Payload)
+		}
+	}
+}
+
 type fakeStore struct {
 	spaces      map[uuid.UUID]domain.Space
 	threads     map[uuid.UUID]domain.Thread
+	comments    map[uuid.UUID]domain.Comment
+	attachments map[uuid.UUID]domain.Attachment
 	updateCalls int
 	outbox      []domain.OutboxEvent
 }
 
 func fixture() (*adminuc.Service, *fakeStore, domain.Actor, domain.Actor) {
 	now := time.Date(2026, 8, 5, 18, 0, 0, 0, time.UTC)
-	store := &fakeStore{spaces: map[uuid.UUID]domain.Space{}, threads: map[uuid.UUID]domain.Thread{}}
-	service := &adminuc.Service{Spaces: fakeSpaces{store}, Threads: fakeThreads{store}, Outbox: fakeOutbox{store},
+	store := &fakeStore{spaces: map[uuid.UUID]domain.Space{}, threads: map[uuid.UUID]domain.Thread{},
+		comments: map[uuid.UUID]domain.Comment{}, attachments: map[uuid.UUID]domain.Attachment{}}
+	service := &adminuc.Service{Spaces: fakeSpaces{store}, Threads: fakeThreads{store}, Comments: fakeComments{store},
+		Attachments: fakeAttachments{store}, Outbox: fakeOutbox{store},
 		Tx: fakeTx{}, Now: func() time.Time { return now }, NewID: uuid.New}
 	return service, store, domain.Actor{UserID: uuid.New(), Role: "ADMIN"}, domain.Actor{UserID: uuid.New(), Role: "MODERATOR"}
 }
 
 type fakeSpaces struct{ *fakeStore }
 type fakeThreads struct{ *fakeStore }
+type fakeComments struct{ *fakeStore }
+type fakeAttachments struct{ *fakeStore }
 type fakeOutbox struct{ *fakeStore }
 type fakeTx struct{}
 
@@ -184,6 +263,30 @@ func (f fakeThreads) NextSequenceAnyState(_ context.Context, id uuid.UUID) (int6
 	return item.LastSequence, nil
 }
 func (f fakeThreads) RecordCommentCreated(context.Context, uuid.UUID, bool) error { return nil }
+func (f fakeComments) GetByIDForUpdate(_ context.Context, id uuid.UUID) (domain.Comment, error) {
+	item, ok := f.comments[id]
+	if !ok {
+		return domain.Comment{}, domain.ErrNotFound
+	}
+	return item, nil
+}
+func (f fakeComments) UpdateModerationStatus(_ context.Context, item domain.Comment, expectedStatus domain.CommentStatus, expectedVersion int) error {
+	current, ok := f.comments[item.ID]
+	if !ok || current.Status != expectedStatus || current.Version != expectedVersion {
+		return domain.ErrModerationConflict
+	}
+	f.comments[item.ID] = item
+	return nil
+}
+func (f fakeAttachments) ListByComment(_ context.Context, threadID, commentID uuid.UUID) ([]domain.Attachment, error) {
+	items := make([]domain.Attachment, 0)
+	for _, item := range f.attachments {
+		if item.ThreadID == threadID && item.CommentID != nil && *item.CommentID == commentID {
+			items = append(items, item)
+		}
+	}
+	return items, nil
+}
 func (f fakeOutbox) Add(_ context.Context, item domain.OutboxEvent) error {
 	f.outbox = append(f.outbox, item)
 	return nil

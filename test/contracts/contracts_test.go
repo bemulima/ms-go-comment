@@ -37,6 +37,7 @@ func TestImplementedHTTPRoutesStaySynchronized(t *testing.T) {
 		`admin.Post("/space/create"`, `admin.Get("/space/get/{spaceID}"`, `admin.Get("/space/list"`,
 		`admin.Put("/space/update/{spaceID}"`, `admin.Delete("/space/delete/{spaceID}"`,
 		`admin.Get("/thread/list"`, `admin.Put("/thread/update/{threadID}"`,
+		`admin.Put("/comment/hide/{commentID}"`, `admin.Put("/comment/restore/{commentID}"`,
 	} {
 		assertContains(t, router, fragment, "admin router registration")
 	}
@@ -85,6 +86,13 @@ func TestAdminRepositoryContract(t *testing.T) {
 		"$2::smallint IS NULL OR status=$2", "ORDER BY created_at, id LIMIT $3 OFFSET $4",
 	} {
 		assertContains(t, repositorySource, fragment, "admin thread list repository")
+	}
+	commentRepository := read(t, "internal/adapters/postgres/comment_repository.go")
+	for _, fragment := range []string{
+		"func (r CommentRepository) UpdateModerationStatus", "status=$1, version=$2, sequence=$3, updated_at=$4",
+		"WHERE id=$5 AND status=$6 AND version=$7", "domain.ErrModerationConflict",
+	} {
+		assertContains(t, commentRepository, fragment, "comment moderation repository")
 	}
 }
 

@@ -229,7 +229,8 @@ func TestService_ReadListAndReconcileViews(t *testing.T) {
 		t.Fatalf("ListComments(children) = %#v, error=%v", children, err)
 	}
 	changes, err := service.ListChanges(context.Background(), actor, repository.CommentChangeQuery{ThreadID: thread.ID, AfterSequence: 1, Limit: 20})
-	if err != nil || len(changes) != 1 || changes[0].Comment.ID != childID {
+	if err != nil || len(changes) != 2 || changes[0].Comment.ID != childID || changes[1].Comment.ID != hiddenID ||
+		changes[1].Comment.Body != "" || len(changes[1].Comment.Links) != 0 || len(changes[1].Attachments) != 0 {
 		t.Fatalf("ListChanges() = %#v, error=%v", changes, err)
 	}
 }
@@ -471,6 +472,14 @@ func (s fakeComments) UpdateContent(_ context.Context, item domain.Comment, expe
 }
 func (s fakeComments) MarkDeleted(ctx context.Context, item domain.Comment, expected int) error {
 	return s.UpdateContent(ctx, item, expected)
+}
+func (s fakeComments) UpdateModerationStatus(_ context.Context, item domain.Comment, expectedStatus domain.CommentStatus, expectedVersion int) error {
+	current, ok := s.comments[item.ID]
+	if !ok || current.Status != expectedStatus || current.Version != expectedVersion {
+		return domain.ErrModerationConflict
+	}
+	s.comments[item.ID] = item
+	return nil
 }
 func (s fakeComments) IncrementReplyCount(_ context.Context, _, id uuid.UUID) error {
 	item := s.comments[id]

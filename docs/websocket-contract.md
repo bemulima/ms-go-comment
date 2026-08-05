@@ -30,6 +30,9 @@ credentials are rejected before upgrade.
 
 Durable server event types are `comment.created`, `comment.updated`, `comment.deleted`, `comment.hidden`, `comment.restored`, `attachment.ready`, `attachment.failed`, and `thread.updated`.
 
+`comment.hidden` is redacted and never carries the moderated body, links, or
+attachments. `comment.restored` carries the safe restored projection.
+
 Ephemeral types are `connection.ready`, `typing.started`, `typing.stopped`, `resync_required`, `error`, and `ping`. Client messages are limited to `typing.start`, `typing.stop`, and `pong` in v1.
 
 ## Reconnect

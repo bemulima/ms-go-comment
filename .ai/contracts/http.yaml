@@ -1,5 +1,5 @@
 schema_version: 1
-status: user_realtime_and_admin_configuration_routes_implemented_internal_deferred
+status: user_realtime_and_admin_routes_implemented_internal_deferred
 source_of_truth: docs/http-contract.md
 route_groups:
     - prefix: /api/v1
@@ -20,8 +20,8 @@ route_groups:
         - POST /realtime/ticket
         - GET /ws
     - prefix: /admin/v1
-      status: configuration_implemented_moderation_deferred
-      authentication: ADMIN writes; ADMIN or MODERATOR reads
+      status: implemented
+      authentication: ADMIN configuration writes; ADMIN or MODERATOR configuration reads and moderation
       routes:
         - POST /space/create
         - GET /space/get/{spaceID}
@@ -61,6 +61,8 @@ implemented_routes:
     - DELETE /admin/v1/space/delete/{spaceID}
     - GET /admin/v1/thread/list
     - PUT /admin/v1/thread/update/{threadID}
+    - PUT /admin/v1/comment/hide/{commentID}
+    - PUT /admin/v1/comment/restore/{commentID}
 implementation:
     router: internal/adapters/http/router.go
     handlers: internal/adapters/http/handlers/comment.go
