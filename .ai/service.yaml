@@ -57,6 +57,11 @@ capabilities:
       confidence: 0.98
       source_path: internal/adapters/http/router.go
       explanation: Authenticated routes call transaction-scoped comment use cases backed by pgx repositories.
+    - name: admin_configuration_rest
+      value: Space lifecycle and thread policy administration
+      confidence: 0.98
+      source_path: internal/adapters/http/handlers/admin.go
+      explanation: ADMIN owns configuration writes while ADMIN and MODERATOR may inspect spaces and threads.
     - name: attachment_lifecycle
       value: Validated temporary image upload, activation, signed GET, and asynchronous deletion
       confidence: 0.98

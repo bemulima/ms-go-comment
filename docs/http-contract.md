@@ -156,7 +156,19 @@ PUT    /admin/v1/comment/hide/{commentID}
 PUT    /admin/v1/comment/restore/{commentID}
 ```
 
-Space writes and moderation require `ADMIN` or `MODERATOR`. Read-only administration may also allow explicitly approved roles.
+Space/thread configuration routes are implemented. `ADMIN` may create, update,
+and soft-disable spaces and update thread status/policy. `ADMIN` and `MODERATOR`
+may read/list spaces and threads; `MODERATOR` cannot change configuration.
+Space keys and creators are immutable. Delete is an idempotent soft-disable.
+List routes accept `limit` (default 20, maximum 100) and non-negative `offset`;
+thread list additionally accepts optional `space_id` and status filters.
+Create and update requests contain the complete space policy. Thread updates
+contain `status` plus `policy_overrides`; every override field is nullable and a
+null/missing field inherits the current space policy. Responses expose the
+effective policy. A successful thread update increments its durable sequence and
+atomically emits `comment.thread.updated` with status and effective policy.
+Comment hide/restore routes and their permission matrix remain deferred to the
+moderation slice.
 
 ## Internal API
 
