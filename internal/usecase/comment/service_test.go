@@ -364,6 +364,20 @@ func (s fakeThreads) GetByResource(_ context.Context, spaceID uuid.UUID, resourc
 	return domain.Thread{}, domain.ErrNotFound
 }
 
+func (s fakeThreads) List(_ context.Context, query repository.ThreadListQuery) ([]domain.Thread, error) {
+	items := make([]domain.Thread, 0)
+	for _, item := range s.threads {
+		if query.SpaceID != nil && item.SpaceID != *query.SpaceID {
+			continue
+		}
+		if query.Status != nil && item.Status != *query.Status {
+			continue
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
 func (s fakeThreads) Update(_ context.Context, item domain.Thread) error {
 	s.threads[item.ID] = item
 	return nil

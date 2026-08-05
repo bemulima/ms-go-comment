@@ -44,6 +44,18 @@ func scanThread(row scanner) (domain.Thread, error) {
 	return item, mapError(err)
 }
 
+func scanThreads(rows pgx.Rows) ([]domain.Thread, error) {
+	items := make([]domain.Thread, 0)
+	for rows.Next() {
+		item, err := scanThread(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 const commentColumns = `id, thread_id, author_id, parent_id, root_id, path,
 depth, body, links, status, version, sequence, direct_replies_count,
 idempotency_key, edited_at, deleted_at, created_at, updated_at`

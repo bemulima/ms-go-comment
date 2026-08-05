@@ -173,6 +173,9 @@ func (f fakeThreads) GetByID(_ context.Context, id uuid.UUID) (domain.Thread, er
 func (f fakeThreads) GetByResource(context.Context, uuid.UUID, domain.ResourceReference) (domain.Thread, error) {
 	return domain.Thread{}, domain.ErrNotFound
 }
+func (f fakeThreads) List(context.Context, repository.ThreadListQuery) ([]domain.Thread, error) {
+	return []domain.Thread{f.item}, nil
+}
 func (f fakeThreads) Update(context.Context, domain.Thread) error                    { return nil }
 func (f fakeThreads) NextSequence(context.Context, uuid.UUID) (int64, error)         { return 0, nil }
 func (f fakeThreads) NextSequenceAnyState(context.Context, uuid.UUID) (int64, error) { return 0, nil }
