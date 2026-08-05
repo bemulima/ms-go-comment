@@ -23,6 +23,8 @@ func errorContract(err error) (int, string, string) {
 	switch {
 	case errors.Is(err, domain.ErrAuthenticationRequired):
 		return http.StatusUnauthorized, "authentication_required", "authenticated user is required"
+	case errors.Is(err, domain.ErrRealtimeTicketInvalid):
+		return http.StatusUnauthorized, "realtime_ticket_invalid", "realtime ticket is invalid or expired"
 	case errors.Is(err, domain.ErrAccessRequired):
 		return http.StatusForbidden, "comment_access_required", "comment access grant is required"
 	case errors.Is(err, domain.ErrForbidden):
@@ -53,7 +55,7 @@ func errorContract(err error) (int, string, string) {
 		return http.StatusUnprocessableEntity, "links_disabled", "links are disabled for this thread"
 	case errors.Is(err, domain.ErrInvalidCommentContent), errors.Is(err, domain.ErrValidation),
 		errors.Is(err, domain.ErrInvalidSpaceKey), errors.Is(err, domain.ErrInvalidResource), errors.Is(err, domain.ErrInvalidPlacement),
-		errors.Is(err, domain.ErrInvalidAttachment):
+		errors.Is(err, domain.ErrInvalidAttachment), errors.Is(err, domain.ErrInvalidRealtimeTicket):
 		return http.StatusUnprocessableEntity, "invalid_comment_content", "request content violates the comment contract"
 	default:
 		return http.StatusInternalServerError, "internal_error", "internal server error"
