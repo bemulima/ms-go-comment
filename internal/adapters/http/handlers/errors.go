@@ -45,6 +45,8 @@ func errorContract(err error) (int, string, string) {
 		return http.StatusConflict, "comment_edit_conflict", "comment was changed by another request"
 	case errors.Is(err, domain.ErrIdempotencyConflict):
 		return http.StatusConflict, "idempotency_conflict", "idempotency key was reused with different input"
+	case errors.Is(err, domain.ErrConflict):
+		return http.StatusConflict, "configuration_conflict", "comment configuration conflicts with existing state"
 	case errors.Is(err, domain.ErrParentNotFound), errors.Is(err, domain.ErrCrossThreadParent):
 		return http.StatusUnprocessableEntity, "parent_not_found", "reply parent is invalid or unavailable"
 	case errors.Is(err, domain.ErrMaxDepthExceeded):
@@ -53,7 +55,7 @@ func errorContract(err error) (int, string, string) {
 		return http.StatusUnprocessableEntity, "images_disabled", "images are disabled for this thread"
 	case errors.Is(err, domain.ErrLinksDisabled):
 		return http.StatusUnprocessableEntity, "links_disabled", "links are disabled for this thread"
-	case errors.Is(err, domain.ErrInvalidCommentContent), errors.Is(err, domain.ErrValidation),
+	case errors.Is(err, domain.ErrInvalidCommentContent), errors.Is(err, domain.ErrValidation), errors.Is(err, domain.ErrInvalidPolicy),
 		errors.Is(err, domain.ErrInvalidSpaceKey), errors.Is(err, domain.ErrInvalidResource), errors.Is(err, domain.ErrInvalidPlacement),
 		errors.Is(err, domain.ErrInvalidAttachment), errors.Is(err, domain.ErrInvalidRealtimeTicket):
 		return http.StatusUnprocessableEntity, "invalid_comment_content", "request content violates the comment contract"

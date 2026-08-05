@@ -33,6 +33,13 @@ func TestImplementedHTTPRoutesStaySynchronized(t *testing.T) {
 		assertContains(t, httpContract, implemented[index], "machine-readable implemented route")
 	}
 	assertContains(t, httpContract, "status: deferred", "admin/internal implementation status")
+	for _, fragment := range []string{
+		`admin.Post("/space/create"`, `admin.Get("/space/get/{spaceID}"`, `admin.Get("/space/list"`,
+		`admin.Put("/space/update/{spaceID}"`, `admin.Delete("/space/delete/{spaceID}"`,
+		`admin.Get("/thread/list"`, `admin.Put("/thread/update/{threadID}"`,
+	} {
+		assertContains(t, router, fragment, "admin router registration")
+	}
 }
 
 func TestRealtimeContractsStaySynchronized(t *testing.T) {
@@ -66,6 +73,18 @@ func TestAgentMapNamesOwnedBoundariesAndDeferredScope(t *testing.T) {
 		"comment_space", "comment_thread", "comment_outbox", "GET /api/v1/ws", "comment.created",
 	} {
 		assertContains(t, contractMap, fragment, "agent contract map")
+	}
+}
+
+func TestAdminRepositoryContract(t *testing.T) {
+	t.Parallel()
+
+	repositorySource := read(t, "internal/adapters/postgres/thread_repository.go")
+	for _, fragment := range []string{
+		"func (r ThreadRepository) List", "$1::uuid IS NULL OR space_id=$1",
+		"$2::smallint IS NULL OR status=$2", "ORDER BY created_at, id LIMIT $3 OFFSET $4",
+	} {
+		assertContains(t, repositorySource, fragment, "admin thread list repository")
 	}
 }
 

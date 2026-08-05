@@ -27,6 +27,11 @@ comment.thread.updated
 
 All lifecycle payloads include `schema_version`, `event_id`, `occurred_at`, `thread_id`, and `sequence`. Comment payloads also include comment, parent/root, actor/author, lifecycle status, version, safe content, and attachment projections required by the WebSocket client.
 
+An admin thread status/policy change increments the same thread sequence and
+inserts `comment.thread.updated` in the configuration transaction. Its payload
+contains the new status and effective policy, so connected clients can update
+their controls without reconnecting.
+
 ## Fan-out
 
 Every realtime instance subscribes to lifecycle subjects without a shared queue group so each instance can deliver an event to its own local connections. Ephemeral typing signals use non-durable NATS subjects scoped by thread and are never written to the outbox.

@@ -11,8 +11,9 @@ tickets, and the thread-scoped WebSocket projection are implemented. Start with 
 [domain map](docs/domain-map.md) and the final
 [agent contract map](docs/agent-contract-map.md).
 
-Space administration/moderation under `/admin/v1` and private-resource grants
-under `/internal/v1` remain designed contracts, not registered runtime routes.
+Space and thread-policy administration is available under `/admin/v1`.
+Comment hide/restore moderation and private-resource grants under `/internal/v1`
+remain designed contracts, not registered runtime routes.
 
 ## Architecture
 

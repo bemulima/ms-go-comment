@@ -16,6 +16,7 @@ import (
 	pgadapter "github.com/bemulima/ms-go-comment/internal/adapters/postgres"
 	websocketadapter "github.com/bemulima/ms-go-comment/internal/adapters/websocket"
 	"github.com/bemulima/ms-go-comment/internal/config"
+	adminuc "github.com/bemulima/ms-go-comment/internal/usecase/admin"
 	commentuc "github.com/bemulima/ms-go-comment/internal/usecase/comment"
 	realtimeuc "github.com/bemulima/ms-go-comment/internal/usecase/realtime"
 	"go.uber.org/zap"
@@ -54,6 +55,7 @@ func main() {
 		SignedURLMinutes:      cfg.AttachmentSignedURLMinutes,
 		ActivationMaxAttempts: cfg.AttachmentActivationAttempts,
 	}
+	adminService := &adminuc.Service{Spaces: spaces, Threads: threads, Outbox: outbox, Tx: pgadapter.TransactionManager{Pool: pool}}
 	realtimeService := &realtimeuc.TicketService{
 		Spaces: spaces, Threads: threads, Tickets: tickets,
 		TTL: time.Duration(cfg.RealtimeTicketTTLSeconds) * time.Second,
@@ -96,6 +98,7 @@ func main() {
 	routerDependencies := httpadapter.RouterDependencies{}
 	if modeHasAPI(cfg.ServiceMode) {
 		routerDependencies.CommentService = commentService
+		routerDependencies.AdminService = adminService
 		routerDependencies.RealtimeService = realtimeService
 	}
 	if modeHasRealtime(cfg.ServiceMode) {

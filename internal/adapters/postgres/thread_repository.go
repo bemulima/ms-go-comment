@@ -36,6 +36,22 @@ FROM comment_thread WHERE space_id=$1 AND resource_type=$2 AND resource_id=$3`,
 		spaceID, resource.Type, resource.ID))
 }
 
+func (r ThreadRepository) List(ctx context.Context, query repository.ThreadListQuery) ([]domain.Thread, error) {
+	if query.Limit < 1 {
+		query.Limit = 20
+	}
+	rows, err := runner(ctx, r.Pool).Query(ctx, `SELECT `+threadColumns+`
+FROM comment_thread
+WHERE ($1::uuid IS NULL OR space_id=$1)
+  AND ($2::smallint IS NULL OR status=$2)
+ORDER BY created_at, id LIMIT $3 OFFSET $4`, query.SpaceID, query.Status, query.Limit, query.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanThreads(rows)
+}
+
 func (r ThreadRepository) Update(ctx context.Context, item domain.Thread) error {
 	command, err := runner(ctx, r.Pool).Exec(ctx, `UPDATE comment_thread SET
 status=$1, allow_images=$2, allow_links=$3, max_depth=$4, max_body_length=$5,

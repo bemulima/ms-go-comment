@@ -34,11 +34,12 @@ Lesson, Product, Article, Page, or User rows.
 | Realtime projection | `GET /api/v1/ws` | `comment.v1` + `ticket.<opaque>` subprotocols; exact Origin allowlist; bounded connections/frames/queue |
 | Durable delivery | background outbox dispatcher | Finite lease, JetStream `event_id` deduplication, bounded retry evidence |
 | Attachment cleanup | background worker | Idempotent activation/deletion and explicit ready/failed/deleted states |
+| Admin configuration | `/admin/v1/space/*`, `/admin/v1/thread/*` | ADMIN writes; ADMIN/MODERATOR reads; space delete is soft-disable |
 
 Gateway-facing routes are `/api/comment/v1/*`. Student REST rewrites to
 `/api/v1/*`; the exact `/api/comment/v1/ws` route preserves Origin, upgrade, and
 subprotocol headers without bearer authentication. The admin gateway rewrite to
-`/admin/v1/*` is installed for the deferred admin API.
+`/admin/v1/*` exposes configuration administration; moderation remains deferred.
 
 ## Business rules
 
@@ -78,8 +79,7 @@ names shorten the last three to `attachment.ready`, `attachment.failed`, and
 
 These contracts are designed but are not registered in the current router:
 
-- `/admin/v1`: space CRUD, thread configuration, hide/restore moderation and
-  explicit `ADMIN`/`MODERATOR` policy;
+- `/admin/v1/comment`: hide/restore moderation and its event-producing transaction;
 - `/internal/v1`: context access grants and trusted host-service thread lookup;
 - rate limiting beyond the implemented per-user WebSocket connection bound;
 - production observability dashboards and multi-instance load validation.

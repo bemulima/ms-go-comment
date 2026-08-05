@@ -25,6 +25,7 @@ Initial stable codes include:
 | `thread_not_writable` | 409 | Thread is read-only/closed/hidden |
 | `comment_edit_conflict` | 409 | Expected version is stale |
 | `idempotency_conflict` | 409 | Key was reused with different input |
+| `configuration_conflict` | 409 | Space key or configuration conflicts with existing state |
 | `parent_not_found` | 422 | Reply parent is invalid or unavailable |
 | `max_depth_exceeded` | 422 | Reply would exceed effective depth |
 | `images_disabled` | 422 | Effective policy forbids new images |
