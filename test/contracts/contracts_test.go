@@ -153,6 +153,25 @@ func TestFrontendSDKContractStaysSynchronized(t *testing.T) {
 	}
 }
 
+func TestWebComponentContractStaysSynchronized(t *testing.T) {
+	t.Parallel()
+
+	element := read(t, "web/src/element.ts")
+	contract := read(t, ".ai/contracts/frontend.yaml")
+	for _, fragment := range []string{
+		"defineCommentThreadElement", "ms-comment-thread", "textContent", "accessGrant",
+		"ms-comment-ready", "ms-comment-error", "ms-comment-select", "loadMore",
+	} {
+		assertContains(t, element, fragment, "Web Component implementation")
+		assertContains(t, contract, fragment, "Web Component agent contract")
+	}
+	for _, fragment := range []string{
+		"accessGrant property only; forbidden in markup", "nested tree rendering", "live WebSocket binding",
+	} {
+		assertContains(t, contract, fragment, "Web Component boundary contract")
+	}
+}
+
 func read(t *testing.T, name string) string {
 	t.Helper()
 	_, source, _, ok := runtime.Caller(0)

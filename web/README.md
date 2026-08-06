@@ -35,3 +35,38 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+## Embeddable Web Component
+
+The optional `ms-comment-thread` shell renders a safe, read-only first slice on
+any host page. Registration is explicit, so importing the headless SDK has no
+DOM side effects.
+
+```ts
+import { defineCommentThreadElement } from "@bemulima/ms-comment-client/element";
+
+defineCommentThreadElement();
+
+const comments = document.createElement("ms-comment-thread");
+comments.spaceKey = "course.private";
+comments.resourceType = "lesson";
+comments.resourceID = "lesson-1";
+comments.accessGrant = currentPrivateResourceGrant; // property only; never markup
+document.querySelector("main")?.append(comments);
+```
+
+Public attributes are `base-url`, `space-key`, `resource-type`, `resource-id`,
+`heading`, and `page-size`. The private grant is intentionally available only
+through the `accessGrant` property. `refresh()` reloads the thread and first
+page; `loadMore()` advances cursor pagination.
+
+The element emits bubbling, composed `ms-comment-ready`, `ms-comment-error`,
+and `ms-comment-select` events. Comment content is projected with
+`textContent`, including deletion tombstones, and is never interpreted as HTML.
+Host applications may theme it with `--ms-comment-*` custom properties and the
+stable `container`, `heading`, `status`, `list`, `comment`, `comment-select`,
+`comment-meta`, `comment-body`, and `load-more` shadow parts. Comment selection
+uses native buttons and remains keyboard accessible.
+
+Nested tree rendering, composing, attachments, and live WebSocket binding are
+deliberately deferred to later frontend slices.

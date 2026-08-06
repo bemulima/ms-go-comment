@@ -29,7 +29,7 @@ private threads and mint short-lived grants; browsers present those grants as
 - `internal/adapters/filestorage`: staged user-media lifecycle.
 - `db/migrations`: reversible PostgreSQL contracts.
 - `.ai`: machine-readable service, architecture, command, workflow, and API contracts for agents.
-- `web`: framework-agnostic TypeScript SDK for REST, access grants, realtime tickets, and reconciliation.
+- `web`: framework-agnostic TypeScript SDK plus an explicitly registered, safe read-only Web Component shell.
 
 ## Local commands
 
