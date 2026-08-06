@@ -77,10 +77,12 @@ export class MSCommentThreadElement extends HTMLElement {
     this.statusNode.setAttribute("part", "status");
     this.statusNode.setAttribute("role", "status");
     this.statusNode.setAttribute("aria-live", "polite");
+    this.statusNode.setAttribute("aria-atomic", "true");
     this.realtimeStatus = document.createElement("div");
     this.realtimeStatus.setAttribute("part", "realtime-status");
     this.realtimeStatus.setAttribute("role", "status");
     this.realtimeStatus.setAttribute("aria-live", "polite");
+    this.realtimeStatus.setAttribute("aria-atomic", "true");
     this.realtimeStatus.hidden = true;
     this.listNode = document.createElement("ol");
     this.listNode.setAttribute("part", "list");
@@ -104,6 +106,7 @@ export class MSCommentThreadElement extends HTMLElement {
     this.textarea.name = "body";
     this.textarea.rows = 4;
     this.textarea.setAttribute("part", "composer-input");
+    this.textarea.setAttribute("aria-describedby", "composer-hint composer-status");
     label.append(this.textarea);
     this.fileInput = document.createElement("input");
     this.fileInput.type = "file";
@@ -111,13 +114,17 @@ export class MSCommentThreadElement extends HTMLElement {
     this.fileInput.multiple = true;
     this.fileInput.accept = "image/jpeg,image/png,image/webp";
     this.fileInput.setAttribute("aria-label", "Attach images");
+    this.fileInput.setAttribute("aria-describedby", "composer-hint composer-status");
     this.fileInput.setAttribute("part", "composer-files");
     this.composerHint = document.createElement("div");
+    this.composerHint.id = "composer-hint";
     this.composerHint.setAttribute("part", "composer-hint");
     this.composerStatus = document.createElement("div");
+    this.composerStatus.id = "composer-status";
     this.composerStatus.setAttribute("part", "composer-status");
     this.composerStatus.setAttribute("role", "status");
     this.composerStatus.setAttribute("aria-live", "polite");
+    this.composerStatus.setAttribute("aria-atomic", "true");
     this.submitButton = actionButton("Post comment", "submit");
     this.submitButton.type = "submit";
     this.composer.append(this.replyContext, this.cancelReplyButton, label, this.fileInput, this.composerHint, this.composerStatus, this.submitButton);
@@ -745,6 +752,7 @@ export class MSCommentThreadElement extends HTMLElement {
   private setLoading(loading: boolean, message: string): void {
     this.loading = loading;
     this.statusNode.textContent = message;
+    this.statusNode.setAttribute("role", "status");
     this.section.setAttribute("aria-busy", String(loading));
     this.moreButton.disabled = loading;
     this.moreButton.hidden = loading || this.cursor === null;
@@ -776,6 +784,7 @@ export class MSCommentThreadElement extends HTMLElement {
     this.loading = false;
     const normalized = normalizeError(error);
     this.statusNode.textContent = normalized.message;
+    this.statusNode.setAttribute("role", "alert");
     this.section.setAttribute("aria-busy", "false");
     this.moreButton.hidden = true;
     this.emitError(normalized, operation);
