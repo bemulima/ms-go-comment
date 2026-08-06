@@ -207,6 +207,25 @@ func TestFrontendIntegrationContractStaysSynchronized(t *testing.T) {
 	}
 }
 
+func TestFrontendReleaseMapNamesBusinessProcessesAndBoundaries(t *testing.T) {
+	t.Parallel()
+
+	releaseMap := read(t, "docs/frontend-contract-map.md")
+	contract := read(t, ".ai/contracts/frontend.yaml")
+	service := read(t, ".ai/service.yaml")
+	for _, fragment := range []string{
+		"Ownership and boundaries", "Public resource", "Private resource", "Create root or reply",
+		"Realtime and recovery", "REST and WebSocket consumption", "Component contract",
+		"Rendering, accessibility, and security invariants", "State and race rules",
+		"Validation and agent change routing", "Deferred scope", "Property-only secret",
+	} {
+		assertContains(t, releaseMap, fragment, "frontend release contract map")
+	}
+	for _, source := range []string{contract, service} {
+		assertContains(t, source, "docs/frontend-contract-map.md", "frontend release map registration")
+	}
+}
+
 func read(t *testing.T, name string) string {
 	t.Helper()
 	_, source, _, ok := runtime.Caller(0)

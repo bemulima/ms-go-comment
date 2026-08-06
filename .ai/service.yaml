@@ -11,6 +11,7 @@ purpose: >-
     state, realtime sequencing, WebSocket tickets, and outbox delivery. It does
     not own host resources, user profiles, or binary file bytes.
 release_contract_map: docs/agent-contract-map.md
+frontend_release_contract_map: docs/frontend-contract-map.md
 stack:
     - name: language
       value: go

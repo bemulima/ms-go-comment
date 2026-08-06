@@ -12,6 +12,7 @@ tickets, and the thread-scoped WebSocket projection are implemented. Start with 
 [domain map](docs/domain-map.md) and the final
 [Backend v2 agent contract map](docs/agent-contract-map.md).
 Frontend hosts should use the [integration guide](docs/frontend-integration.md).
+Agents should use the [Frontend v1 contract map](docs/frontend-contract-map.md).
 
 Space/thread-policy administration and comment hide/restore moderation are
 available under `/admin/v1`. Trusted host services use `/internal/v1` to ensure

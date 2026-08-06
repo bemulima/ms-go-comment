@@ -1,6 +1,6 @@
 schema_version: 1
 status: frontend_v1_runtime_and_integration_contract_implemented
-source_of_truth: web/README.md
+source_of_truth: docs/frontend-contract-map.md
 package: '@bemulima/ms-comment-client'
 location: web
 boundaries:
@@ -64,6 +64,7 @@ web_component:
     accessibility_details: labelled and described inputs, atomic live regions, alert load failures, visible focus, text tombstones
     theming: documented --ms-comment-* custom properties and stable shadow parts
     integration_guide: docs/frontend-integration.md
+    release_contract_map: docs/frontend-contract-map.md
     vanilla_example: web/examples/vanilla.html
     realtime: explicit opt-in; lifecycle stop; in-place comment/policy reconciliation; typing; draft and branch preservation
     states: loading, empty, error, ready, root pagination, branch pagination, submitting, connecting, live, reconnecting
