@@ -1,4 +1,4 @@
-.PHONY: fmt deps tidy test lint validate-contracts migrate up down
+.PHONY: fmt deps tidy test lint web-test web-build validate-contracts migrate up down
 
 fmt:
 	gofmt -w cmd internal test
@@ -15,9 +15,15 @@ test:
 lint:
 	$(CURDIR)/.cache/bin/golangci-lint run ./...
 
+web-test:
+	npm --prefix web test
+
+web-build:
+	npm --prefix web run build
+
 validate-contracts:
 	@set -eu; \
-	for file in .ai/service.yaml .ai/architecture.yaml .ai/commands.yaml .ai/contracts/database.yaml .ai/contracts/http.yaml .ai/contracts/websocket.yaml .ai/contracts/events.yaml; do \
+	for file in .ai/service.yaml .ai/architecture.yaml .ai/commands.yaml .ai/contracts/database.yaml .ai/contracts/http.yaml .ai/contracts/websocket.yaml .ai/contracts/events.yaml .ai/contracts/frontend.yaml; do \
 		test -s "$$file"; \
 		rg -q '^schema_version: 1$$' "$$file"; \
 	done

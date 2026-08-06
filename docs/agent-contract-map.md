@@ -126,6 +126,14 @@ provisioning, dashboards, and distributed/load validation remain separate
 tasks. They must consume this map without moving business authorization into
 the browser.
 
+## Frontend v1 status
+
+The headless browser SDK is implemented under `web/`. It owns typed REST calls,
+private-grant forwarding, single-use WebSocket ticket handshakes, reconnect, and
+REST reconciliation. It never sets gateway identity headers, accepts no
+internal token, and renders no content. The embeddable Web Component and visual
+tree/composer remain the next frontend slices under issue #26.
+
 An agent must create a new issue and implement the use case, adapter, tests, docs,
 and `.ai/contracts` status together before changing any item above to
 implemented.

@@ -54,6 +54,13 @@ layers:
         - staged upload
         - idempotent activation and deletion
         - signed URL requests
+    - name: browser_sdk
+      source_path: web/src
+      responsibilities:
+        - typed REST transport
+        - access-grant forwarding
+        - realtime ticket handshake and reconciliation
+      dependency_rule: owns no business authorization or UI rendering
 domain_ownership:
     - CommentSpace
     - CommentThread
@@ -73,6 +80,7 @@ implemented_adapters:
     nats: internal/adapters/nats
     websocket: internal/adapters/websocket
     http_guardrails: internal/adapters/http/middleware/guardrails.go
+    browser_sdk: web/src
 implemented_usecases:
     thread_and_comment: internal/usecase/comment/service.go
     attachment_lifecycle: internal/usecase/comment/attachment_service.go

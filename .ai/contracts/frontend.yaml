@@ -1,0 +1,25 @@
+schema_version: 1
+status: headless_browser_sdk_implemented
+source_of_truth: web/README.md
+package: '@bemulima/ms-comment-client'
+location: web
+boundaries:
+    identity: gateway session through credentials include; SDK never sets X-User-ID or X-User-Role
+    private_access: optional X-Comment-Access-Grant provider
+    internal_token: forbidden
+    html_rendering: outside headless SDK; raw HTML is never rendered
+rest:
+    source: web/src/client.ts
+    base_path_default: /api/comment/v1
+    capabilities:
+        - thread ensure/get
+        - comment list/get/changes/create/update/delete
+        - attachment upload/signed-url/delete
+        - realtime ticket mint
+realtime:
+    source: web/src/realtime.ts
+    credential: ticket.<opaque> Sec-WebSocket-Protocol only
+    ticket_in_url: forbidden
+    recovery: sequence gaps and resync_required call REST changes until has_more is false
+    reconnect: remints a single-use ticket
+tests: web/test/client.test.mjs
