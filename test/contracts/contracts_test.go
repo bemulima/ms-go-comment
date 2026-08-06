@@ -160,13 +160,20 @@ func TestWebComponentContractStaysSynchronized(t *testing.T) {
 	contract := read(t, ".ai/contracts/frontend.yaml")
 	for _, fragment := range []string{
 		"defineCommentThreadElement", "ms-comment-thread", "textContent", "accessGrant",
-		"ms-comment-ready", "ms-comment-error", "ms-comment-select", "loadMore",
+		"ms-comment-ready", "ms-comment-error", "ms-comment-select", "loadMore", "loadReplies",
+		"ms-comment-created", "ms-comment-replies-loaded",
 	} {
 		assertContains(t, element, fragment, "Web Component implementation")
 		assertContains(t, contract, fragment, "Web Component agent contract")
 	}
+	for _, fragment := range []string{"uploadAttachment", "crypto.randomUUID", "safeHTTPURL", "max_image_bytes", "CommentAPIError"} {
+		assertContains(t, element, fragment, "Web Component implementation")
+	}
 	for _, fragment := range []string{
-		"accessGrant property only; forbidden in markup", "nested tree rendering", "live WebSocket binding",
+		"accessGrant property only; forbidden in markup", "independent opaque cursor pagination",
+		"backend effective policy and authorization are authoritative", "client UUID idempotency key",
+		"retains the exact payload and idempotency key", "cleanup after explicit 4xx rejection",
+		"stage before create", "live WebSocket binding",
 	} {
 		assertContains(t, contract, fragment, "Web Component boundary contract")
 	}
