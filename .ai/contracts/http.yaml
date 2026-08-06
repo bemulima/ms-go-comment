@@ -90,6 +90,26 @@ authentication:
     private_resource_header: X-Comment-Access-Grant on authenticated REST and realtime ticket minting
     private_resource_binding: issuer + user_id + space/resource tuple + permissions + expiry
     internal_header: exact X-Internal-Token
+guardrails:
+    request_id: server-generated X-Request-ID replaces client input
+    panic_contract: logged with request ID and returned as stable internal_error JSON
+    security_headers:
+        - 'Cache-Control: no-store'
+        - 'Content-Security-Policy: default-src none; frame-ancestors none'
+        - 'X-Content-Type-Options: nosniff'
+        - 'X-Frame-Options: DENY'
+    actor_rate_limit:
+        scope: authenticated /api/v1 REST and realtime ticket; WebSocket upgrade excluded
+        algorithm: bounded per-instance token bucket keyed by verified actor UUID
+        defaults: 20 requests per second, burst 40, maximum 10000 actors, idle expiry 300 seconds
+        exhaustion: 429 rate_limited with Retry-After 1
+        multi_instance: gateway or distributed limiter remains authoritative
+    server_limits:
+        read_header_timeout_seconds: 5
+        read_timeout_seconds: 30
+        write_timeout_seconds: 75
+        idle_timeout_seconds: 60
+        max_header_bytes: 32768
 pagination:
     default_limit: 20
     maximum_limit: 100

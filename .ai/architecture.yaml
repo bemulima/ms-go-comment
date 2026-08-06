@@ -61,6 +61,7 @@ domain_ownership:
     - CommentAttachment
     - OutboxEvent
     - RealtimeTicket
+    - AccessGrant
 domain_sources:
     entities: internal/domain
     persistence_ports: internal/domain/repository
@@ -71,6 +72,7 @@ implemented_adapters:
     filestorage: internal/adapters/filestorage
     nats: internal/adapters/nats
     websocket: internal/adapters/websocket
+    http_guardrails: internal/adapters/http/middleware/guardrails.go
 implemented_usecases:
     thread_and_comment: internal/usecase/comment/service.go
     attachment_lifecycle: internal/usecase/comment/attachment_service.go

@@ -45,6 +45,13 @@ The service exposes `GET /healthz`. `SERVICE_MODE` supports `all`, `api`,
 attachment cleanup, ticket cleanup, access-grant cleanup, and the outbox
 dispatcher.
 
+User REST and realtime-ticket requests have a bounded per-instance token-bucket
+guard. Defaults are 20 requests/second, burst 40, at most 10,000 active actor
+buckets, and five-minute idle eviction. Configure them with
+`HTTP_USER_RATE_LIMIT_*`; gateway or distributed rate limiting remains the
+cross-instance production authority. HTTP read/write/idle timeouts and maximum
+header bytes are also configurable through `HTTP_*` environment variables.
+
 ## Security boundary
 
 The service accepts `X-User-ID` and `X-User-Role` only from `ms-gateway`. Do not

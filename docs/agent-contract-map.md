@@ -38,6 +38,7 @@ Lesson, Product, Article, Page, or User rows.
 | Comment moderation | `/admin/v1/comment/hide/*`, `/admin/v1/comment/restore/*` | ADMIN/MODERATOR; idempotent transitions; redacted hide event |
 | Private-resource grant | `POST /internal/v1/access-grant/create` | Exact internal token; hash-only bounded grant tied to issuer/user/resource/permissions |
 | Trusted private thread | `/internal/v1/thread/ensure`, `/internal/v1/thread/get-by-resource` | Active `context_grant` spaces only; opaque host tuple remains the integration key |
+| HTTP guardrails | global middleware + actor token bucket | Server request ID/security headers/recovery; bounded per-instance user REST/ticket rate limit |
 
 Gateway-facing routes are `/api/comment/v1/*`. Student REST rewrites to
 `/api/v1/*`; the exact `/api/comment/v1/ws` route preserves Origin, upgrade, and
@@ -83,7 +84,8 @@ names shorten the last three to `attachment.ready`, `attachment.failed`, and
 
 These items are not registered in the current runtime:
 
-- rate limiting beyond the implemented per-user WebSocket connection bound;
+- distributed cross-instance rate limiting beyond the implemented bounded
+  per-instance REST/ticket and WebSocket connection guards;
 - production observability dashboards and multi-instance load validation.
 
 An agent must create a new issue and implement the use case, adapter, tests, docs,
