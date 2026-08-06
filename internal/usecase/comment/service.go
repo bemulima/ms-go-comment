@@ -30,6 +30,11 @@ type Service struct {
 	AttachmentTTLMinutes  int
 	SignedURLMinutes      int
 	ActivationMaxAttempts int
+	Access                AccessAuthorizer
+}
+
+type AccessAuthorizer interface {
+	Permissions(context.Context, domain.Actor, domain.Space, domain.ResourceReference) (domain.AccessPermission, error)
 }
 
 type EnsureThreadInput struct {
@@ -85,7 +90,7 @@ func (s Service) EnsureThread(ctx context.Context, actor domain.Actor, in Ensure
 	if err != nil {
 		return ThreadView{}, mapNotFound(err, domain.ErrSpaceNotFound)
 	}
-	if err := authorizeSpace(space); err != nil {
+	if err := s.authorizeAccess(ctx, actor, space, in.Resource, domain.AccessPermissionRead); err != nil {
 		return ThreadView{}, err
 	}
 	now := s.now()
@@ -105,7 +110,7 @@ func (s Service) EnsureThread(ctx context.Context, actor domain.Actor, in Ensure
 }
 
 func (s Service) GetThread(ctx context.Context, actor domain.Actor, threadID uuid.UUID) (ThreadView, error) {
-	thread, _, policy, err := s.loadThreadContext(ctx, actor, threadID, false)
+	thread, _, policy, err := s.loadThreadContext(ctx, actor, threadID, domain.AccessPermissionRead)
 	return ThreadView{Thread: thread, Policy: policy}, err
 }
 
@@ -113,7 +118,7 @@ func (s Service) ListComments(ctx context.Context, actor domain.Actor, query rep
 	if query.Limit < 1 || query.Limit > MaxPageLimit+1 {
 		return nil, fmt.Errorf("%w: limit must be between 1 and %d", domain.ErrValidation, MaxPageLimit)
 	}
-	thread, _, _, err := s.loadThreadContext(ctx, actor, query.ThreadID, false)
+	thread, _, _, err := s.loadThreadContext(ctx, actor, query.ThreadID, domain.AccessPermissionRead)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +143,7 @@ func (s Service) GetComment(ctx context.Context, actor domain.Actor, commentID u
 	if item.Status == domain.CommentStatusHidden {
 		return CommentView{}, domain.ErrCommentNotFound
 	}
-	if _, _, _, err := s.loadThreadContext(ctx, actor, item.ThreadID, false); err != nil {
+	if _, _, _, err := s.loadThreadContext(ctx, actor, item.ThreadID, domain.AccessPermissionRead); err != nil {
 		return CommentView{}, err
 	}
 	attachments, err := s.Attachments.ListByComment(ctx, item.ThreadID, item.ID)
@@ -152,7 +157,7 @@ func (s Service) ListChanges(ctx context.Context, actor domain.Actor, query repo
 	if query.AfterSequence < 0 || query.Limit < 1 || query.Limit > MaxPageLimit+1 {
 		return nil, fmt.Errorf("%w: invalid changes cursor or limit", domain.ErrValidation)
 	}
-	if _, _, _, err := s.loadThreadContext(ctx, actor, query.ThreadID, false); err != nil {
+	if _, _, _, err := s.loadThreadContext(ctx, actor, query.ThreadID, domain.AccessPermissionRead); err != nil {
 		return nil, err
 	}
 	comments, err := s.Comments.ListChanges(ctx, query)
@@ -177,13 +182,13 @@ func (s Service) CreateComment(ctx context.Context, actor domain.Actor, in Creat
 		}
 		existing, err := s.Comments.GetByIdempotencyKey(txCtx, actor.UserID, in.IdempotencyKey)
 		if err == nil {
-			return s.resolveReplay(txCtx, existing, in, &result)
+			return s.resolveReplay(txCtx, actor, existing, in, &result)
 		}
 		if !errors.Is(err, domain.ErrNotFound) {
 			return err
 		}
 
-		thread, _, policy, err := s.loadThreadContext(txCtx, actor, in.ThreadID, true)
+		thread, _, policy, err := s.loadThreadContext(txCtx, actor, in.ThreadID, domain.AccessPermissionWrite)
 		if err != nil {
 			return err
 		}
@@ -339,7 +344,7 @@ func (s Service) loadMutableComment(ctx context.Context, actor domain.Actor, com
 	if item.Status != domain.CommentStatusActive {
 		return domain.Comment{}, domain.Thread{}, domain.Policy{}, domain.ErrCommentNotFound
 	}
-	thread, _, policy, err := s.loadThreadContext(ctx, actor, item.ThreadID, true)
+	thread, _, policy, err := s.loadThreadContext(ctx, actor, item.ThreadID, domain.AccessPermissionWrite)
 	if err != nil {
 		return domain.Comment{}, domain.Thread{}, domain.Policy{}, err
 	}
@@ -356,7 +361,12 @@ func (s Service) loadMutableComment(ctx context.Context, actor domain.Actor, com
 	return item, thread, policy, nil
 }
 
-func (s Service) loadThreadContext(ctx context.Context, actor domain.Actor, threadID uuid.UUID, write bool) (domain.Thread, domain.Space, domain.Policy, error) {
+func (s Service) loadThreadContext(
+	ctx context.Context,
+	actor domain.Actor,
+	threadID uuid.UUID,
+	required domain.AccessPermission,
+) (domain.Thread, domain.Space, domain.Policy, error) {
 	if err := actor.Validate(); err != nil {
 		return domain.Thread{}, domain.Space{}, domain.Policy{}, err
 	}
@@ -368,13 +378,13 @@ func (s Service) loadThreadContext(ctx context.Context, actor domain.Actor, thre
 	if err != nil {
 		return domain.Thread{}, domain.Space{}, domain.Policy{}, mapNotFound(err, domain.ErrSpaceNotFound)
 	}
-	if err := authorizeSpace(space); err != nil {
+	if err := s.authorizeAccess(ctx, actor, space, thread.Resource, required); err != nil {
 		return domain.Thread{}, domain.Space{}, domain.Policy{}, err
 	}
 	if thread.Status == domain.ThreadStatusHidden {
 		return domain.Thread{}, domain.Space{}, domain.Policy{}, domain.ErrThreadNotFound
 	}
-	if write && thread.Status != domain.ThreadStatusOpen {
+	if required != domain.AccessPermissionRead && thread.Status != domain.ThreadStatusOpen {
 		return domain.Thread{}, domain.Space{}, domain.Policy{}, domain.ErrThreadNotWritable
 	}
 	policy, err := domain.ApplyPolicy(space.Policy, thread.PolicyOverrides)
@@ -414,7 +424,7 @@ func (s Service) validateAttachments(ctx context.Context, actor domain.Actor, th
 	return result, nil
 }
 
-func (s Service) resolveReplay(ctx context.Context, existing domain.Comment, in CreateCommentInput, result *CreateCommentResult) error {
+func (s Service) resolveReplay(ctx context.Context, actor domain.Actor, existing domain.Comment, in CreateCommentInput, result *CreateCommentResult) error {
 	attachments, err := s.Attachments.ListByComment(ctx, existing.ThreadID, existing.ID)
 	if err != nil {
 		return err
@@ -425,6 +435,20 @@ func (s Service) resolveReplay(ctx context.Context, existing domain.Comment, in 
 	}
 	if existing.ThreadID != in.ThreadID || !equalUUIDPtr(existing.ParentID, in.ParentID) || existing.Body != in.Body || !equalUUIDSet(existingIDs, in.AttachmentIDs) {
 		return domain.ErrIdempotencyConflict
+	}
+	thread, err := s.Threads.GetByID(ctx, existing.ThreadID)
+	if err != nil {
+		return mapNotFound(err, domain.ErrThreadNotFound)
+	}
+	space, err := s.Spaces.GetByID(ctx, thread.SpaceID)
+	if err != nil {
+		return mapNotFound(err, domain.ErrSpaceNotFound)
+	}
+	if err := s.authorizeAccess(ctx, actor, space, thread.Resource, domain.AccessPermissionWrite); err != nil {
+		return err
+	}
+	if thread.Status == domain.ThreadStatusHidden {
+		return domain.ErrThreadNotFound
 	}
 	*result = CreateCommentResult{View: CommentView{Comment: existing, Attachments: attachments}}
 	return nil
@@ -518,12 +542,28 @@ func uuidOrNew(generator func() uuid.UUID) uuid.UUID {
 	return uuid.New()
 }
 
-func authorizeSpace(space domain.Space) error {
+func (s Service) authorizeAccess(
+	ctx context.Context,
+	actor domain.Actor,
+	space domain.Space,
+	resource domain.ResourceReference,
+	required domain.AccessPermission,
+) error {
 	if space.Status != domain.SpaceStatusActive {
 		return domain.ErrSpaceNotFound
 	}
-	if space.AccessMode != domain.AccessModeAuthenticated {
+	if space.AccessMode == domain.AccessModeAuthenticated {
+		return nil
+	}
+	if space.AccessMode != domain.AccessModeContextGrant || s.Access == nil {
 		return domain.ErrAccessRequired
+	}
+	permissions, err := s.Access.Permissions(ctx, actor, space, resource)
+	if err != nil {
+		return err
+	}
+	if !permissions.Includes(required) {
+		return domain.ErrForbidden
 	}
 	return nil
 }

@@ -24,9 +24,14 @@ type TicketService struct {
 	Spaces  repository.SpaceRepository
 	Threads repository.ThreadRepository
 	Tickets repository.RealtimeTicketRepository
+	Access  AccessAuthorizer
 	Now     func() time.Time
 	Random  io.Reader
 	TTL     time.Duration
+}
+
+type AccessAuthorizer interface {
+	Permissions(context.Context, domain.Actor, domain.Space, domain.ResourceReference) (domain.AccessPermission, error)
 }
 
 type MintTicketInput struct {
@@ -56,14 +61,18 @@ func (s TicketService) Mint(ctx context.Context, actor domain.Actor, input MintT
 	if input.ThreadID == uuid.Nil || (input.LastSequence != nil && *input.LastSequence < 0) {
 		return MintedTicket{}, fmt.Errorf("%w: thread and non-negative sequence are required", domain.ErrInvalidRealtimeTicket)
 	}
-	thread, _, policy, err := s.loadThread(ctx, input.ThreadID)
+	thread, space, policy, err := s.loadThread(ctx, input.ThreadID)
+	if err != nil {
+		return MintedTicket{}, err
+	}
+	accessPermissions, err := s.accessPermissions(ctx, actor, space, thread.Resource)
 	if err != nil {
 		return MintedTicket{}, err
 	}
 	permissions := domain.RealtimePermissionRead
-	if thread.Status == domain.ThreadStatusOpen {
+	if thread.Status == domain.ThreadStatusOpen && accessPermissions.Includes(domain.AccessPermissionWrite) {
 		permissions |= domain.RealtimePermissionWrite
-		if policy.AllowImages && policy.MaxAttachments > 0 {
+		if accessPermissions.Includes(domain.AccessPermissionUpload) && policy.AllowImages && policy.MaxAttachments > 0 {
 			permissions |= domain.RealtimePermissionUpload
 		}
 	}
@@ -155,11 +164,30 @@ func (s TicketService) loadThread(ctx context.Context, id uuid.UUID) (domain.Thr
 	if space.Status != domain.SpaceStatusActive || thread.Status == domain.ThreadStatusHidden {
 		return domain.Thread{}, domain.Space{}, domain.Policy{}, domain.ErrThreadNotFound
 	}
-	if space.AccessMode != domain.AccessModeAuthenticated {
-		return domain.Thread{}, domain.Space{}, domain.Policy{}, domain.ErrAccessRequired
-	}
 	policy, err := domain.ApplyPolicy(space.Policy, thread.PolicyOverrides)
 	return thread, space, policy, err
+}
+
+func (s TicketService) accessPermissions(
+	ctx context.Context,
+	actor domain.Actor,
+	space domain.Space,
+	resource domain.ResourceReference,
+) (domain.AccessPermission, error) {
+	if space.AccessMode == domain.AccessModeAuthenticated {
+		return domain.FullAccessPermissions(), nil
+	}
+	if space.AccessMode != domain.AccessModeContextGrant || s.Access == nil {
+		return 0, domain.ErrAccessRequired
+	}
+	permissions, err := s.Access.Permissions(ctx, actor, space, resource)
+	if err != nil {
+		return 0, err
+	}
+	if !permissions.Includes(domain.AccessPermissionRead) {
+		return 0, domain.ErrForbidden
+	}
+	return permissions, nil
 }
 
 func (s TicketService) ttl() time.Duration {
