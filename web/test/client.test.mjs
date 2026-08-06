@@ -49,13 +49,16 @@ test("realtime client keeps tickets out of URLs and reconciles sequence gaps", a
   let socket;
   let socketURL;
   let protocols;
+  const states = [];
+  const sent = [];
   const changes = [];
   const realtime = new CommentRealtimeClient({
-    client, threadID: "thread-1", onEvent: () => {}, onChanges: (items) => changes.push(...items), reconnectDelayMS: 1,
+    client, threadID: "thread-1", onEvent: () => {}, onChanges: (items) => changes.push(...items),
+    onState: (state) => states.push(state), reconnectDelayMS: 1,
     webSocket: (url, selectedProtocols) => {
       socketURL = url;
       protocols = selectedProtocols;
-      socket = { onopen: null, onmessage: null, onclose: null, onerror: null, close() {}, send() {} };
+      socket = { onopen: null, onmessage: null, onclose: null, onerror: null, close() {}, send(data) { sent.push(data); } };
       return socket;
     },
   });
@@ -63,6 +66,9 @@ test("realtime client keeps tickets out of URLs and reconciles sequence gaps", a
   assert.equal(socketURL, "wss://app.example/api/comment/v1/ws");
   assert.deepEqual(protocols, ["comment.v1", "ticket.opaque-ticket"]);
   assert.equal(socketURL.includes("opaque-ticket"), false);
+  socket.onopen({});
+  socket.onmessage({ data: JSON.stringify({ v: 1, type: "ping" }) });
+  assert.equal(sent[0], JSON.stringify({ v: 1, type: "pong" }));
   socket.onmessage({ data: JSON.stringify({ v: 1, type: "comment.created", thread_id: "thread-1", sequence: 2, data: {} }) });
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(changes.length, 1);
@@ -71,4 +77,8 @@ test("realtime client keeps tickets out of URLs and reconciles sequence gaps", a
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(calls.filter((url) => url.endsWith("/realtime/ticket")).length, 2);
   realtime.stop();
+  assert.ok(states.includes("connecting"));
+  assert.ok(states.includes("connected"));
+  assert.ok(states.includes("reconnecting"));
+  assert.equal(states.at(-1), "stopped");
 });

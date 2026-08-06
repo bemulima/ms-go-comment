@@ -67,7 +67,7 @@ export interface RealtimeEnvelope<T = unknown> {
   v: 1;
   type: string;
   event_id?: UUID;
-  thread_id: UUID;
+  thread_id?: UUID;
   sequence?: number;
   current_sequence?: number;
   last_sequence?: number;

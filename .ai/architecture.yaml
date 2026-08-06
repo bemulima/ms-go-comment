@@ -62,6 +62,7 @@ layers:
         - realtime ticket handshake and reconciliation
         - safe recursive Web Component projection
         - policy-aware comment and attachment composer UX
+        - opt-in in-place realtime and typing projection
       dependency_rule: owns no business authorization and never interprets comment content as HTML
 domain_ownership:
     - CommentSpace

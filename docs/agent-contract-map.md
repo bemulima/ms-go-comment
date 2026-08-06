@@ -140,9 +140,12 @@ staged media. Bodies, filenames, tombstones, and status messages use `textConten
 only checked HTTP(S) values become link/image attributes. It never sets gateway
 identity headers, accepts no internal token, and accepts private grants only
 through a JavaScript property, never through markup. Browser policy checks are
-UX guidance; backend policy and authorization remain authoritative. Live
-WebSocket binding, edit/delete controls, and final integration examples remain
-later frontend slices under issue #26.
+UX guidance; backend policy and authorization remain authoritative. Optional
+realtime starts only after REST state, uses single-use subprotocol tickets,
+reports connection/reconnect state, answers application ping/pong, applies
+comment/policy reconciliation in place, and preserves drafts plus loaded
+branches. Edit/delete controls and final integration examples remain later
+frontend slices under issue #26.
 
 An agent must create a new issue and implement the use case, adapter, tests, docs,
 and `.ai/contracts` status together before changing any item above to
@@ -159,7 +162,7 @@ implemented.
 | WebSocket | `internal/adapters/websocket` | ticket use case, Origin/subprotocol rules and reconciliation |
 | NATS event | domain outbox + NATS adapter | `.ai/contracts/events.yaml`, consumer mapping and at-least-once behavior |
 | Attachment | attachment use case + FileStorage adapter | policy, cleanup retries and signed authorization |
-| Web Component | `web/src/element.ts` | `.ai/contracts/frontend.yaml`, per-branch cursors, policy-aware composer, staged media, safe projection and DOM tests |
+| Web Component | `web/src/element.ts` | `.ai/contracts/frontend.yaml`, per-branch cursors, composer, staged media, in-place realtime, safe projection and DOM tests |
 
 Stable error codes are in [error-contract.md](error-contract.md). Machine-readable
 contracts under `.ai/contracts` must stay synchronized; `make validate-contracts`

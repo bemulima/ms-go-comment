@@ -52,11 +52,12 @@ comments.spaceKey = "course.private";
 comments.resourceType = "lesson";
 comments.resourceID = "lesson-1";
 comments.accessGrant = currentPrivateResourceGrant; // property only; never markup
+comments.realtime = true; // opt in to ticket-authenticated live projection
 document.querySelector("main")?.append(comments);
 ```
 
 Public attributes are `base-url`, `space-key`, `resource-type`, `resource-id`,
-`heading`, and `page-size`. The private grant is intentionally available only
+`heading`, `page-size`, and boolean `realtime`. The private grant is intentionally available only
 through the `accessGrant` property. `refresh()` reloads the thread and first
 page; `loadMore()` advances root pagination; `loadReplies(commentID)` opens a
 branch and advances its independent direct-child cursor.
@@ -73,18 +74,30 @@ cleanup. The composer is hidden for non-open threads.
 The element emits bubbling, composed `ms-comment-ready`, `ms-comment-error`,
 `ms-comment-select`, `ms-comment-reply-start`,
 `ms-comment-replies-loaded`, `ms-comment-attachment-uploaded`, and
-`ms-comment-created` events. Comment bodies and filenames use `textContent`.
+`ms-comment-created` events. With realtime enabled it also emits
+`ms-comment-realtime-state`, `ms-comment-reconciled`, `ms-comment-typing`, and
+`ms-comment-thread-updated`.
+
+Realtime starts after the initial REST projection and stops on refresh,
+disconnect, resource change, or grant change. The SDK exposes
+connecting/connected/reconnecting/stopped states, remints single-use tickets,
+answers application ping/pong, and reconciles sequence gaps through REST. The
+component applies comment and policy changes in place, preserving the current
+draft, selected files, and loaded branches. Textarea activity sends bounded
+typing start/stop signals.
+
+Comment bodies and filenames use `textContent`.
 Only server-extracted HTTP(S) links become hardened anchors; ready images use
 authorized signed URLs after a second HTTP(S) check. Deleted and hidden content
 is shown as a tombstone and never interpreted as HTML.
 
 Host applications may theme it with `--ms-comment-*` custom properties and
-stable shadow parts including `container`, `heading`, `status`, `list`,
+stable shadow parts including `container`, `heading`, `status`, `realtime-status`, `list`,
 `comment`, `comment-content`, `comment-actions`, `comment-select`, `reply`,
 `replies`, `replies-toggle`, `comment-meta`, `comment-body`, `comment-links`,
 `comment-attachments`, `attachment-image`, `composer`, `composer-input`, and
 `load-more`. Native buttons, details/summary, labels, and live regions preserve
 keyboard and screen-reader semantics.
 
-Live WebSocket binding, edit/delete controls, and host-level integration
-examples remain later frontend slices.
+Edit/delete controls and host-level integration examples remain later frontend
+slices.

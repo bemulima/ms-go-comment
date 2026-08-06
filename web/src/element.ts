@@ -1,6 +1,9 @@
 import { CommentClient } from "./client.js";
 import type { Attachment, Comment, Thread, UUID } from "./contracts.js";
 import { CommentAPIError } from "./errors.js";
+import { CommentRealtimeClient } from "./realtime.js";
+import type { RealtimeState } from "./realtime.js";
+import type { RealtimeEnvelope } from "./contracts.js";
 
 const elementName = "ms-comment-thread";
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -25,13 +28,14 @@ interface PendingCreate {
 
 export class MSCommentThreadElement extends HTMLElement {
   static readonly observedAttributes = [
-    "base-url", "space-key", "resource-type", "resource-id", "heading", "page-size",
+    "base-url", "space-key", "resource-type", "resource-id", "heading", "page-size", "realtime",
   ];
 
   private readonly root: ShadowRoot;
   private readonly section: HTMLElement;
   private readonly titleNode: HTMLHeadingElement;
   private readonly statusNode: HTMLDivElement;
+  private readonly realtimeStatus: HTMLDivElement;
   private readonly listNode: HTMLOListElement;
   private readonly moreButton: HTMLButtonElement;
   private readonly composer: HTMLFormElement;
@@ -52,6 +56,9 @@ export class MSCommentThreadElement extends HTMLElement {
   private loading = false;
   private submitting = false;
   private pendingCreate?: PendingCreate;
+  private realtimeClient?: CommentRealtimeClient;
+  private typingTimer?: ReturnType<typeof setTimeout>;
+  private readonly typingUsers = new Set<UUID>();
   private replyToID: UUID | null = null;
   private grant: string | null = null;
 
@@ -70,6 +77,11 @@ export class MSCommentThreadElement extends HTMLElement {
     this.statusNode.setAttribute("part", "status");
     this.statusNode.setAttribute("role", "status");
     this.statusNode.setAttribute("aria-live", "polite");
+    this.realtimeStatus = document.createElement("div");
+    this.realtimeStatus.setAttribute("part", "realtime-status");
+    this.realtimeStatus.setAttribute("role", "status");
+    this.realtimeStatus.setAttribute("aria-live", "polite");
+    this.realtimeStatus.hidden = true;
     this.listNode = document.createElement("ol");
     this.listNode.setAttribute("part", "list");
     this.listNode.setAttribute("aria-label", "Comments");
@@ -111,20 +123,31 @@ export class MSCommentThreadElement extends HTMLElement {
     this.composer.append(this.replyContext, this.cancelReplyButton, label, this.fileInput, this.composerHint, this.composerStatus, this.submitButton);
     this.composer.addEventListener("submit", (event) => {
       event.preventDefault();
+      this.signalTyping(false);
       void this.submitComment();
     });
-    this.section.append(this.titleNode, this.statusNode, this.listNode, this.moreButton, this.composer);
+    this.textarea.addEventListener("input", () => this.signalTyping(true));
+    this.section.append(this.titleNode, this.statusNode, this.realtimeStatus, this.listNode, this.moreButton, this.composer);
     this.root.append(style, this.section);
     this.updateHeading();
   }
 
   connectedCallback(): void { void this.refresh(); }
-  disconnectedCallback(): void { this.abort?.abort(); }
+  disconnectedCallback(): void {
+    this.abort?.abort();
+    this.stopRealtime();
+  }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (oldValue === newValue) return;
     if (name === "heading") this.updateHeading();
-    if (this.isConnected && name !== "heading") queueMicrotask(() => { void this.refresh(); });
+    if (!this.isConnected || name === "heading") return;
+    if (name === "realtime") {
+      this.stopRealtime();
+      if (this.realtime && this.thread) this.startRealtime(this.thread, this.generation);
+      return;
+    }
+    queueMicrotask(() => { void this.refresh(); });
   }
 
   get baseURL(): string { return this.getAttribute("base-url") ?? "/api/comment/v1"; }
@@ -141,9 +164,12 @@ export class MSCommentThreadElement extends HTMLElement {
     this.grant = value;
     if (this.isConnected) queueMicrotask(() => { void this.refresh(); });
   }
+  get realtime(): boolean { return this.hasAttribute("realtime"); }
+  set realtime(value: boolean) { this.toggleAttribute("realtime", value); }
 
   async refresh(): Promise<void> {
     const generation = ++this.generation;
+    this.stopRealtime();
     this.abort?.abort();
     const controller = new AbortController();
     this.abort = controller;
@@ -177,6 +203,7 @@ export class MSCommentThreadElement extends HTMLElement {
       this.renderComments(page.items, this.listNode);
       this.setLoading(false, page.items.length === 0 ? "No comments yet." : `${page.items.length} comments loaded.`);
       this.dispatch("ms-comment-ready", { thread });
+      this.startRealtime(thread, generation);
     } catch (error) {
       if (this.isCurrent(controller, generation)) this.fail(error, "refresh");
     }
@@ -253,41 +280,49 @@ export class MSCommentThreadElement extends HTMLElement {
       item.setAttribute("part", "comment");
       item.dataset.commentId = comment.id;
       item.style.setProperty("--ms-comment-depth", String(comment.depth));
-      const article = document.createElement("article");
-      article.setAttribute("part", "comment-content");
-      const meta = document.createElement("div");
-      meta.setAttribute("part", "comment-meta");
-      meta.textContent = comment.status === "deleted"
-        ? "Deleted comment"
-        : comment.status === "hidden" ? "Hidden comment" : `Author ${comment.author_id}`;
-      const body = document.createElement("p");
-      body.setAttribute("part", "comment-body");
-      body.textContent = comment.status === "deleted"
-        ? "Comment deleted"
-        : comment.status === "hidden" ? "Comment hidden" : comment.body;
-      article.append(meta, body);
-      if (comment.status === "active") {
-        this.renderLinks(comment, article);
-        this.renderAttachments(comment, article);
-      }
-      const actions = document.createElement("div");
-      actions.setAttribute("part", "comment-actions");
-      const select = actionButton("Select", "comment-select");
-      select.setAttribute("aria-label", `Select comment by ${comment.author_id}`);
-      select.addEventListener("click", () => this.dispatch("ms-comment-select", { comment }));
-      actions.append(select);
-      if (this.canReply(comment)) {
-        const reply = actionButton("Reply", "reply");
-        reply.setAttribute("aria-label", `Reply to comment by ${comment.author_id}`);
-        reply.addEventListener("click", () => this.startReply(comment));
-        actions.append(reply);
-      }
-      item.append(article, actions);
+      item.append(this.buildCommentContent(comment), this.buildCommentActions(comment));
       if (comment.direct_replies_count > 0 || this.canReply(comment)) item.append(this.createReplyBranch(comment));
       target.append(item);
       this.commentItems.set(comment.id, item);
     }
     this.moreButton.hidden = this.loading || this.cursor === null;
+  }
+
+  private buildCommentContent(comment: Comment): HTMLElement {
+    const article = document.createElement("article");
+    article.setAttribute("part", "comment-content");
+    const meta = document.createElement("div");
+    meta.setAttribute("part", "comment-meta");
+    meta.textContent = comment.status === "deleted"
+      ? "Deleted comment"
+      : comment.status === "hidden" ? "Hidden comment" : `Author ${comment.author_id}`;
+    const body = document.createElement("p");
+    body.setAttribute("part", "comment-body");
+    body.textContent = comment.status === "deleted"
+      ? "Comment deleted"
+      : comment.status === "hidden" ? "Comment hidden" : comment.body;
+    article.append(meta, body);
+    if (comment.status === "active") {
+      this.renderLinks(comment, article);
+      this.renderAttachments(comment, article);
+    }
+    return article;
+  }
+
+  private buildCommentActions(comment: Comment): HTMLElement {
+    const actions = document.createElement("div");
+    actions.setAttribute("part", "comment-actions");
+    const select = actionButton("Select", "comment-select");
+    select.setAttribute("aria-label", `Select comment by ${comment.author_id}`);
+    select.addEventListener("click", () => this.dispatch("ms-comment-select", { comment }));
+    actions.append(select);
+    if (this.canReply(comment)) {
+      const reply = actionButton("Reply", "reply");
+      reply.setAttribute("aria-label", `Reply to comment by ${comment.author_id}`);
+      reply.addEventListener("click", () => this.startReply(comment));
+      actions.append(reply);
+    }
+    return actions;
   }
 
   private createReplyBranch(comment: Comment): HTMLDetailsElement {
@@ -532,6 +567,177 @@ export class MSCommentThreadElement extends HTMLElement {
     return comment.status === "active" && this.thread?.status === "open" && comment.depth < this.thread.policy.max_depth;
   }
 
+  private startRealtime(thread: Thread, generation: number): void {
+    if (!this.realtime) {
+      this.realtimeStatus.hidden = true;
+      return;
+    }
+    this.realtimeStatus.hidden = false;
+    const realtime = new CommentRealtimeClient({
+      client: this.client(),
+      threadID: thread.id,
+      onEvent: (event) => { void this.handleRealtimeEvent(realtime, generation, event); },
+      onChanges: (comments) => {
+        void this.applyRealtimeChanges(realtime, generation, comments);
+      },
+      onError: (error) => {
+        if (realtime === this.realtimeClient) this.emitError(error, "realtime");
+      },
+      onState: (state) => {
+        if (realtime === this.realtimeClient) this.setRealtimeState(state);
+      },
+    });
+    this.realtimeClient = realtime;
+    void realtime.start(thread.last_sequence);
+  }
+
+  private stopRealtime(): void {
+    if (this.typingTimer) clearTimeout(this.typingTimer);
+    this.typingTimer = undefined;
+    this.realtimeClient?.typing(false);
+    this.realtimeClient?.stop();
+    this.realtimeClient = undefined;
+    this.typingUsers.clear();
+    this.realtimeStatus.hidden = true;
+  }
+
+  private async handleRealtimeEvent(
+    realtime: CommentRealtimeClient,
+    generation: number,
+    event: RealtimeEnvelope,
+  ): Promise<void> {
+    if (realtime !== this.realtimeClient || generation !== this.generation) return;
+    if (event.type === "typing.started" || event.type === "typing.stopped") {
+      const userID = stringField(event.data, "user_id");
+      if (!userID) return;
+      if (event.type === "typing.started") this.typingUsers.add(userID);
+      else this.typingUsers.delete(userID);
+      this.updateTypingStatus();
+      this.dispatch("ms-comment-typing", { userID, active: event.type === "typing.started", count: this.typingUsers.size });
+      return;
+    }
+    if (event.type === "thread.updated") {
+      await this.reconcileThread(realtime, generation);
+      return;
+    }
+    if (!event.type.startsWith("comment.") && !event.type.startsWith("attachment.")) return;
+    const commentID = stringField(event.data, "comment_id");
+    if (!commentID) return;
+    await this.reconcileComment(realtime, generation, commentID);
+  }
+
+  private async reconcileComment(realtime: CommentRealtimeClient, generation: number, commentID: UUID): Promise<void> {
+    try {
+      const client = this.client();
+      const comment = await client.getComment(commentID, this.abort?.signal);
+      if (realtime !== this.realtimeClient || generation !== this.generation) return;
+      this.upsertComment(comment);
+      if (comment.parent_id) {
+        const parent = await client.getComment(comment.parent_id, this.abort?.signal);
+        if (realtime !== this.realtimeClient || generation !== this.generation) return;
+        this.upsertComment(parent);
+      }
+      this.dispatch("ms-comment-reconciled", { comments: [comment] });
+    } catch (error) {
+      if (realtime === this.realtimeClient && generation === this.generation) this.emitError(error, "realtime-reconcile");
+    }
+  }
+
+  private async applyRealtimeChanges(
+    realtime: CommentRealtimeClient,
+    generation: number,
+    comments: Comment[],
+  ): Promise<void> {
+    if (realtime !== this.realtimeClient || generation !== this.generation) return;
+    const parentIDs = new Set<UUID>();
+    for (const comment of comments) {
+      this.upsertComment(comment);
+      if (comment.parent_id) parentIDs.add(comment.parent_id);
+    }
+    try {
+      for (const parentID of parentIDs) {
+        const parent = await this.client().getComment(parentID, this.abort?.signal);
+        if (realtime !== this.realtimeClient || generation !== this.generation) return;
+        this.upsertComment(parent);
+      }
+      this.dispatch("ms-comment-reconciled", { comments });
+    } catch (error) {
+      if (realtime === this.realtimeClient && generation === this.generation) this.emitError(error, "realtime-reconcile");
+    }
+  }
+
+  private async reconcileThread(realtime: CommentRealtimeClient, generation: number): Promise<void> {
+    const thread = this.thread;
+    if (!thread) return;
+    try {
+      const updated = await this.client().getThread(thread.id, this.abort?.signal);
+      if (realtime !== this.realtimeClient || generation !== this.generation) return;
+      this.thread = updated;
+      if (!this.pendingCreate && !this.submitting) this.configureComposer(updated);
+      else if (updated.status !== "open") this.composer.hidden = true;
+      for (const comment of [...this.comments.values()]) this.upsertComment(comment);
+      this.dispatch("ms-comment-thread-updated", { thread: updated });
+    } catch (error) {
+      if (realtime === this.realtimeClient && generation === this.generation) this.emitError(error, "thread-reconcile");
+    }
+  }
+
+  private upsertComment(comment: Comment): void {
+    const item = this.commentItems.get(comment.id);
+    this.comments.set(comment.id, comment);
+    if (item) {
+      const content = item.children.item(0);
+      const actions = item.children.item(1);
+      if (content) item.replaceChild(this.buildCommentContent(comment), content);
+      if (actions) item.replaceChild(this.buildCommentActions(comment), actions);
+      const branch = this.replyBranches.get(comment.id);
+      if (branch) this.updateReplyBranch(branch);
+      else if (comment.direct_replies_count > 0 || this.canReply(comment)) item.append(this.createReplyBranch(comment));
+      return;
+    }
+    if (!comment.parent_id) {
+      this.renderComments([comment], this.listNode);
+      return;
+    }
+    const branch = this.replyBranches.get(comment.parent_id);
+    if (branch?.loaded) this.renderComments([comment], branch.list);
+  }
+
+  private signalTyping(active: boolean): void {
+    if (!this.realtimeClient) return;
+    if (this.typingTimer) clearTimeout(this.typingTimer);
+    this.typingTimer = undefined;
+    this.realtimeClient.typing(active);
+    if (active) {
+      this.typingTimer = setTimeout(() => {
+        this.typingTimer = undefined;
+        this.realtimeClient?.typing(false);
+      }, 1500);
+    }
+  }
+
+  private setRealtimeState(state: RealtimeState): void {
+    const labels: Record<RealtimeState, string> = {
+      connecting: "Connecting to live updates…",
+      connected: "Live updates connected.",
+      reconnecting: "Reconnecting live updates…",
+      stopped: "Live updates stopped.",
+    };
+    if (state !== "connected") this.typingUsers.clear();
+    this.realtimeStatus.textContent = labels[state];
+    this.dispatch("ms-comment-realtime-state", { state });
+  }
+
+  private updateTypingStatus(): void {
+    if (this.typingUsers.size === 0) {
+      this.realtimeStatus.textContent = "Live updates connected.";
+      return;
+    }
+    this.realtimeStatus.textContent = this.typingUsers.size === 1
+      ? "Someone is typing…"
+      : `${this.typingUsers.size} people are typing…`;
+  }
+
   private client(): CommentClient {
     return new CommentClient({ baseURL: this.baseURL, accessGrant: this.grant ?? undefined });
   }
@@ -619,6 +825,12 @@ function safeHTTPURL(value: string): string | null {
   }
 }
 
+function stringField(value: unknown, field: string): string | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = (value as Record<string, unknown>)[field];
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
 function formatBytes(value: number): string {
   return value >= 1024 * 1024 ? `${Math.floor(value / (1024 * 1024))} MiB` : `${Math.floor(value / 1024)} KiB`;
 }
@@ -628,7 +840,7 @@ const styles = `
 [hidden] { display: none !important; }
 [part="container"] { background: var(--ms-comment-background, #fff); border: 1px solid var(--ms-comment-border, #d9e0e8); border-radius: var(--ms-comment-radius, .75rem); padding: var(--ms-comment-space, 1rem); }
 [part="heading"] { font-size: 1.25rem; margin: 0 0 .75rem; }
-[part="status"], [part="composer-hint"], [part="composer-status"] { color: var(--ms-comment-muted, #5d6878); min-height: 1.5em; }
+[part="status"], [part="realtime-status"], [part="composer-hint"], [part="composer-status"] { color: var(--ms-comment-muted, #5d6878); min-height: 1.5em; }
 [part~="list"] { list-style: none; margin: .75rem 0 0; padding: 0; }
 [part="comment"] { border-top: 1px solid var(--ms-comment-border, #d9e0e8); padding: .75rem 0; }
 [part="comment-meta"] { color: var(--ms-comment-muted, #5d6878); font-size: .8125rem; }

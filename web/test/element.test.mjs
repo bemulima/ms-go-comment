@@ -431,6 +431,90 @@ test("composer reflects disabled link and image policy", async () => {
   element.remove();
 });
 
+test("opt-in realtime reconciles in place without losing the composer draft", async () => {
+  const sockets = [];
+  class MockWebSocket {
+    constructor(url, protocols) {
+      this.url = url;
+      this.protocols = protocols;
+      this.onopen = null;
+      this.onmessage = null;
+      this.onclose = null;
+      this.onerror = null;
+      this.sent = [];
+      this.closed = false;
+      sockets.push(this);
+    }
+    close() { this.closed = true; }
+    send(data) { this.sent.push(data); }
+  }
+  globalThis.WebSocket = MockWebSocket;
+  const initial = comment("comment-live-1", "initial");
+  const incoming = comment("comment-live-2", "from realtime", { sequence: 3 });
+  globalThis.fetch = async (url) => {
+    if (url.endsWith("/thread/ensure")) return response(thread());
+    if (url.includes("/comment/list")) return response({ items: [initial], next_cursor: null });
+    if (url.endsWith("/realtime/ticket")) {
+      return response({ ticket: "live-ticket", expires_at: new Date().toISOString(), protocol: "comment.v1" }, 201);
+    }
+    if (url.endsWith("/comment/get/comment-live-2")) return response(incoming);
+    if (url.endsWith("/thread/get/thread-1")) return response(thread("thread-1", { status: "read_only", last_sequence: 4 }));
+    throw new Error(`unexpected URL ${url}`);
+  };
+  const element = document.createElement("ms-comment-thread");
+  element.spaceKey = "course";
+  element.resourceType = "lesson";
+  element.resourceID = "lesson-1";
+  const ready = new Promise((resolve) => element.addEventListener("ms-comment-ready", resolve, { once: true }));
+  document.body.append(element);
+  await ready;
+  element.shadowRoot.querySelector('[part="composer-input"]').value = "unsent draft";
+  element.realtime = true;
+  while (sockets.length === 0) await Promise.resolve();
+  const socket = sockets[0];
+  const connected = new Promise((resolve) => element.addEventListener("ms-comment-realtime-state", (event) => {
+    if (event.detail.state === "connected") resolve();
+  }, { once: true }));
+  socket.onopen(new window.Event("open"));
+  await connected;
+  assert.equal(element.shadowRoot.querySelector('[part="composer-input"]').value, "unsent draft");
+
+  socket.onmessage({ data: JSON.stringify({ v: 1, type: "ping" }) });
+  assert.equal(socket.sent.at(-1), JSON.stringify({ v: 1, type: "pong" }));
+  const reconciled = new Promise((resolve) => element.addEventListener("ms-comment-reconciled", resolve, { once: true }));
+  socket.onmessage({ data: JSON.stringify({
+    v: 1, type: "comment.created", thread_id: "thread-1", sequence: 3,
+    data: { comment_id: "comment-live-2" },
+  }) });
+  await reconciled;
+
+  assert.deepEqual(
+    [...element.shadowRoot.querySelectorAll('[part="comment-body"]')].map((node) => node.textContent),
+    ["initial", "from realtime"],
+  );
+  assert.equal(element.shadowRoot.querySelector('[part="composer-input"]').value, "unsent draft");
+  const typing = new Promise((resolve) => element.addEventListener("ms-comment-typing", resolve, { once: true }));
+  socket.onmessage({ data: JSON.stringify({
+    v: 1, type: "typing.started", thread_id: "thread-1", data: { user_id: "user-2" },
+  }) });
+  await typing;
+  assert.match(element.shadowRoot.querySelector('[part="realtime-status"]').textContent, /typing/u);
+  const threadUpdated = new Promise((resolve) => element.addEventListener("ms-comment-thread-updated", resolve, { once: true }));
+  socket.onmessage({ data: JSON.stringify({
+    v: 1, type: "thread.updated", thread_id: "thread-1", sequence: 4,
+    data: { status: "read_only" },
+  }) });
+  await threadUpdated;
+  assert.equal(element.shadowRoot.querySelector('[part="composer"]').hidden, true);
+  assert.equal(element.shadowRoot.querySelector('[part="composer-input"]').value, "unsent draft");
+  element.shadowRoot.querySelector('[part="composer-input"]').dispatchEvent(new window.Event("input"));
+  assert.ok(socket.sent.includes(JSON.stringify({ v: 1, type: "typing.start" })));
+  element.realtime = false;
+  assert.ok(socket.sent.includes(JSON.stringify({ v: 1, type: "typing.stop" })));
+  element.remove();
+  assert.equal(socket.closed, true);
+});
+
 test("element reports missing integration attributes", async () => {
   const element = document.createElement("ms-comment-thread");
   const failed = new Promise((resolve) => element.addEventListener("ms-comment-error", resolve, { once: true }));
