@@ -1,5 +1,5 @@
 schema_version: 1
-status: headless_sdk_tree_composer_and_attachments_implemented
+status: headless_sdk_interactive_tree_and_realtime_implemented
 source_of_truth: web/README.md
 package: '@bemulima/ms-comment-client'
 location: web
@@ -23,6 +23,8 @@ realtime:
     ticket_in_url: forbidden
     recovery: sequence gaps and resync_required call REST changes until has_more is false
     reconnect: remints a single-use ticket
+    states: connecting, connected, reconnecting, stopped
+    application_liveness: ping receives pong without requiring thread_id
 web_component:
     source: web/src/element.ts
     tag: ms-comment-thread
@@ -34,6 +36,7 @@ web_component:
         - resource-id
         - heading
         - page-size
+        - realtime
     private_access: accessGrant property only; forbidden in markup
     methods:
         - refresh
@@ -47,6 +50,10 @@ web_component:
         - ms-comment-replies-loaded
         - ms-comment-attachment-uploaded
         - ms-comment-created
+        - ms-comment-realtime-state
+        - ms-comment-reconciled
+        - ms-comment-typing
+        - ms-comment-thread-updated
     tree: roots and each direct-child branch own independent opaque cursor pagination
     composer: root and reply create with client UUID idempotency key; hidden unless thread is open
     ambiguous_create: network/5xx retains the exact payload and idempotency key for explicit retry; no attachment cleanup
@@ -54,9 +61,9 @@ web_component:
     attachments: JPEG/PNG/WebP stage before create, bind by ID, cleanup after explicit 4xx rejection, ready preview through signed URL
     rendering: bodies and filenames use textContent; only checked HTTP(S) links and signed image URLs become attributes
     accessibility: native button, form, label, details/summary and live-region semantics
-    states: loading, empty, error, ready, root pagination, branch pagination, submitting
+    realtime: explicit opt-in; lifecycle stop; in-place comment/policy reconciliation; typing; draft and branch preservation
+    states: loading, empty, error, ready, root pagination, branch pagination, submitting, connecting, live, reconnecting
     deferred:
-        - live WebSocket binding
         - edit and delete controls
         - moderation and admin controls
 tests:
