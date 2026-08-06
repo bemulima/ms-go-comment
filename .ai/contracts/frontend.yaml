@@ -1,5 +1,5 @@
 schema_version: 1
-status: headless_browser_sdk_implemented
+status: headless_sdk_and_web_component_shell_implemented
 source_of_truth: web/README.md
 package: '@bemulima/ms-comment-client'
 location: web
@@ -22,4 +22,32 @@ realtime:
     ticket_in_url: forbidden
     recovery: sequence gaps and resync_required call REST changes until has_more is false
     reconnect: remints a single-use ticket
-tests: web/test/client.test.mjs
+web_component:
+    source: web/src/element.ts
+    tag: ms-comment-thread
+    registration: explicit through defineCommentThreadElement
+    attributes:
+        - base-url
+        - space-key
+        - resource-type
+        - resource-id
+        - heading
+        - page-size
+    private_access: accessGrant property only; forbidden in markup
+    methods:
+        - refresh
+        - loadMore
+    events:
+        - ms-comment-ready
+        - ms-comment-error
+        - ms-comment-select
+    rendering: comment content uses textContent and is never interpreted as HTML
+    states: loading, empty, error, ready, pagination
+    deferred:
+        - nested tree rendering
+        - composer and mutations
+        - attachments
+        - live WebSocket binding
+tests:
+    - web/test/client.test.mjs
+    - web/test/element.test.mjs

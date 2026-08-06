@@ -60,7 +60,8 @@ layers:
         - typed REST transport
         - access-grant forwarding
         - realtime ticket handshake and reconciliation
-      dependency_rule: owns no business authorization or UI rendering
+        - safe read-only Web Component projection
+      dependency_rule: owns no business authorization and never interprets comment content as HTML
 domain_ownership:
     - CommentSpace
     - CommentThread
@@ -81,6 +82,7 @@ implemented_adapters:
     websocket: internal/adapters/websocket
     http_guardrails: internal/adapters/http/middleware/guardrails.go
     browser_sdk: web/src
+    web_component: web/src/element.ts
 implemented_usecases:
     thread_and_comment: internal/usecase/comment/service.go
     attachment_lifecycle: internal/usecase/comment/attachment_service.go
