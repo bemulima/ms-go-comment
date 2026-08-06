@@ -128,16 +128,21 @@ the browser.
 
 ## Frontend v1 status
 
-The headless browser SDK and first embeddable Web Component shell are implemented
-under `web/`. The SDK owns typed REST calls, private-grant forwarding,
-single-use WebSocket ticket handshakes, reconnect, and REST reconciliation. The
-explicitly registered `<ms-comment-thread>` shell resolves the resource tuple,
-loads paginated root comments, exposes lifecycle/selection events, and projects
-all comment content with `textContent`. It never sets gateway identity headers,
-accepts no internal token, and accepts private grants only through a JavaScript
-property, never through markup. Nested tree rendering, composer/mutations,
-attachments, and live WebSocket binding remain later frontend slices under
-issue #26.
+The headless browser SDK and embeddable Web Component tree/composer are
+implemented under `web/`. The SDK owns typed REST calls, private-grant
+forwarding, single-use WebSocket ticket handshakes, reconnect, and REST
+reconciliation. The explicitly registered `<ms-comment-thread>` resolves the
+resource tuple, paginates roots and direct-child branches independently, creates
+roots/replies, stages policy-allowed images, and projects authorized links/media
+safely. Ambiguous network/5xx create outcomes retain the exact attachment IDs
+and idempotency key for a deliberate retry; only explicit rejection cleans up
+staged media. Bodies, filenames, tombstones, and status messages use `textContent`;
+only checked HTTP(S) values become link/image attributes. It never sets gateway
+identity headers, accepts no internal token, and accepts private grants only
+through a JavaScript property, never through markup. Browser policy checks are
+UX guidance; backend policy and authorization remain authoritative. Live
+WebSocket binding, edit/delete controls, and final integration examples remain
+later frontend slices under issue #26.
 
 An agent must create a new issue and implement the use case, adapter, tests, docs,
 and `.ai/contracts` status together before changing any item above to
@@ -154,7 +159,7 @@ implemented.
 | WebSocket | `internal/adapters/websocket` | ticket use case, Origin/subprotocol rules and reconciliation |
 | NATS event | domain outbox + NATS adapter | `.ai/contracts/events.yaml`, consumer mapping and at-least-once behavior |
 | Attachment | attachment use case + FileStorage adapter | policy, cleanup retries and signed authorization |
-| Web Component shell | `web/src/element.ts` | `.ai/contracts/frontend.yaml`, safe text projection, property-only grants and DOM tests |
+| Web Component | `web/src/element.ts` | `.ai/contracts/frontend.yaml`, per-branch cursors, policy-aware composer, staged media, safe projection and DOM tests |
 
 Stable error codes are in [error-contract.md](error-contract.md). Machine-readable
 contracts under `.ai/contracts` must stay synchronized; `make validate-contracts`

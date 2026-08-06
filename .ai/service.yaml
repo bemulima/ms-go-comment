@@ -99,10 +99,10 @@ capabilities:
       source_path: web/src/index.ts
       explanation: Framework-agnostic SDK centralizes browser transport without accepting identity headers or rendering untrusted content.
     - name: embeddable_comment_shell
-      value: Explicitly registered safe read-only Web Component for arbitrary host pages
+      value: Explicitly registered safe discussion tree and policy-aware composer for arbitrary host pages
       confidence: 0.98
       source_path: web/src/element.ts
-      explanation: The component resolves a resource thread, paginates roots, renders text safely, and keeps private grants out of markup.
+      explanation: The component paginates roots/replies, creates comments, stages policy-allowed images, renders authorized media safely, and keeps private grants out of markup.
 relations:
     - name: depends_on
       value: postgres

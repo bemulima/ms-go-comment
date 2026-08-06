@@ -38,7 +38,7 @@ npm run build
 
 ## Embeddable Web Component
 
-The optional `ms-comment-thread` shell renders a safe, read-only first slice on
+The optional `ms-comment-thread` renders a safe discussion tree and composer on
 any host page. Registration is explicit, so importing the headless SDK has no
 DOM side effects.
 
@@ -58,15 +58,33 @@ document.querySelector("main")?.append(comments);
 Public attributes are `base-url`, `space-key`, `resource-type`, `resource-id`,
 `heading`, and `page-size`. The private grant is intentionally available only
 through the `accessGrant` property. `refresh()` reloads the thread and first
-page; `loadMore()` advances cursor pagination.
+page; `loadMore()` advances root pagination; `loadReplies(commentID)` opens a
+branch and advances its independent direct-child cursor.
+
+The composer creates roots and replies with a fresh UUID idempotency key. It
+uses the effective thread policy to expose character, link, depth, image count,
+type, and size guidance, while the backend remains authoritative. Allowed
+JPEG/PNG/WebP files are staged before comment creation and their IDs are bound
+by the create request. Staged files are deleted after an explicit rejected
+create. A network/5xx ambiguity retains the exact attachment IDs and idempotency
+key behind a locked retry action, preventing a blind duplicate or destructive
+cleanup. The composer is hidden for non-open threads.
 
 The element emits bubbling, composed `ms-comment-ready`, `ms-comment-error`,
-and `ms-comment-select` events. Comment content is projected with
-`textContent`, including deletion tombstones, and is never interpreted as HTML.
-Host applications may theme it with `--ms-comment-*` custom properties and the
-stable `container`, `heading`, `status`, `list`, `comment`, `comment-select`,
-`comment-meta`, `comment-body`, and `load-more` shadow parts. Comment selection
-uses native buttons and remains keyboard accessible.
+`ms-comment-select`, `ms-comment-reply-start`,
+`ms-comment-replies-loaded`, `ms-comment-attachment-uploaded`, and
+`ms-comment-created` events. Comment bodies and filenames use `textContent`.
+Only server-extracted HTTP(S) links become hardened anchors; ready images use
+authorized signed URLs after a second HTTP(S) check. Deleted and hidden content
+is shown as a tombstone and never interpreted as HTML.
 
-Nested tree rendering, composing, attachments, and live WebSocket binding are
-deliberately deferred to later frontend slices.
+Host applications may theme it with `--ms-comment-*` custom properties and
+stable shadow parts including `container`, `heading`, `status`, `list`,
+`comment`, `comment-content`, `comment-actions`, `comment-select`, `reply`,
+`replies`, `replies-toggle`, `comment-meta`, `comment-body`, `comment-links`,
+`comment-attachments`, `attachment-image`, `composer`, `composer-input`, and
+`load-more`. Native buttons, details/summary, labels, and live regions preserve
+keyboard and screen-reader semantics.
+
+Live WebSocket binding, edit/delete controls, and host-level integration
+examples remain later frontend slices.
