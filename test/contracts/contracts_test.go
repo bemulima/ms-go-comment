@@ -134,6 +134,25 @@ func TestHTTPGuardrailContractsStaySynchronized(t *testing.T) {
 	}
 }
 
+func TestFrontendSDKContractStaysSynchronized(t *testing.T) {
+	t.Parallel()
+
+	client := read(t, "web/src/client.ts")
+	realtime := read(t, "web/src/realtime.ts")
+	contract := read(t, ".ai/contracts/frontend.yaml")
+	for _, fragment := range []string{
+		"X-Comment-Access-Grant", `credentials: "include"`, "/realtime/ticket",
+	} {
+		assertContains(t, client, fragment, "frontend REST implementation")
+	}
+	for _, fragment := range []string{"ticket.${ticket.ticket}", "listChanges", "scheduleReconnect"} {
+		assertContains(t, realtime, fragment, "frontend realtime implementation")
+	}
+	for _, fragment := range []string{"ticket_in_url: forbidden", "identity: gateway session", "raw HTML is never rendered"} {
+		assertContains(t, contract, fragment, "frontend agent contract")
+	}
+}
+
 func read(t *testing.T, name string) string {
 	t.Helper()
 	_, source, _, ok := runtime.Caller(0)
