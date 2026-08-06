@@ -84,9 +84,32 @@ func TestRouter_WebSocketRouteUsesTicketHandlerWithoutGatewayActor(t *testing.T)
 	})
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/ws", nil)
 	response := httptest.NewRecorder()
-	NewRouter(RouterDependencies{WebSocketHandler: handler}).ServeHTTP(response, request)
+	NewRouter(RouterDependencies{WebSocketHandler: handler, UserRateLimiter: denyActorLimiter{}}).ServeHTTP(response, request)
 	if response.Code != http.StatusSwitchingProtocols || !called {
 		t.Fatalf("status=%d called=%v", response.Code, called)
+	}
+}
+
+func TestRouter_RateLimitsUserRESTAndRealtimeTicket(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name, method, path, body string
+		dependencies             RouterDependencies
+	}{
+		{name: "comment REST", method: http.MethodGet, path: "/api/v1/thread/get/" + uuid.NewString(), dependencies: RouterDependencies{CommentService: &stubCommentService{}}},
+		{name: "realtime ticket", method: http.MethodPost, path: "/api/v1/realtime/ticket", body: `{}`, dependencies: RouterDependencies{RealtimeService: &stubRealtimeService{}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.dependencies.UserRateLimiter = denyActorLimiter{}
+			response := httptest.NewRecorder()
+			NewRouter(tt.dependencies).ServeHTTP(response, authenticatedRequest(tt.method, tt.path, tt.body))
+			if response.Code != http.StatusTooManyRequests || response.Header().Get("Retry-After") != "1" ||
+				!strings.Contains(response.Body.String(), `"error":"rate_limited"`) {
+				t.Fatalf("status=%d retry=%q body=%s", response.Code, response.Header().Get("Retry-After"), response.Body.String())
+			}
+		})
 	}
 }
 
