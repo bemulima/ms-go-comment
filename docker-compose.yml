@@ -23,6 +23,15 @@ services:
       dockerfile: docker/Dockerfile
     environment:
       HTTP_PORT: "8080"
+      HTTP_READ_HEADER_TIMEOUT_SECONDS: "5"
+      HTTP_READ_TIMEOUT_SECONDS: "30"
+      HTTP_WRITE_TIMEOUT_SECONDS: "75"
+      HTTP_IDLE_TIMEOUT_SECONDS: "60"
+      HTTP_MAX_HEADER_BYTES: "32768"
+      HTTP_USER_RATE_LIMIT_RPS: "20"
+      HTTP_USER_RATE_LIMIT_BURST: "40"
+      HTTP_USER_RATE_LIMIT_MAX_ACTORS: "10000"
+      HTTP_USER_RATE_LIMIT_IDLE_SECONDS: "300"
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ms_comment}?sslmode=disable
       NATS_URL: nats://nats:4222
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me}
