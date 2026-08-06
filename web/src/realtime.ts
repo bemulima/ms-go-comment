@@ -10,6 +10,7 @@ export interface SocketLike {
   send(data: string): void;
 }
 export type SocketFactory = (url: string, protocols: string[]) => SocketLike;
+export type RealtimeState = "connecting" | "connected" | "reconnecting" | "stopped";
 
 export interface RealtimeClientOptions {
   client: CommentClient;
@@ -18,6 +19,7 @@ export interface RealtimeClientOptions {
   onEvent: (event: RealtimeEnvelope) => void;
   onChanges?: (comments: Comment[]) => void;
   onError?: (error: unknown) => void;
+  onState?: (state: RealtimeState) => void;
   reconnectDelayMS?: number;
 }
 
@@ -27,6 +29,7 @@ export class CommentRealtimeClient {
   private ready = false;
   private sequence = 0;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private state: RealtimeState = "stopped";
 
   constructor(private readonly options: RealtimeClientOptions) {}
 
@@ -34,6 +37,7 @@ export class CommentRealtimeClient {
     this.stop();
     this.stopped = false;
     this.sequence = lastSequence;
+    this.setState("connecting");
     await this.connect();
   }
 
@@ -44,6 +48,7 @@ export class CommentRealtimeClient {
     this.reconnectTimer = undefined;
     this.socket?.close(1000, "client stopped");
     this.socket = undefined;
+    this.setState("stopped");
   }
 
   typing(active: boolean): void {
@@ -57,12 +62,19 @@ export class CommentRealtimeClient {
       const factory = this.options.webSocket ?? ((url, protocols) => new WebSocket(url, protocols));
       const socket = factory(this.socketURL(), [ticket.protocol, `ticket.${ticket.ticket}`]);
       this.socket = socket;
-      socket.onopen = () => { this.ready = true; };
+      socket.onopen = () => {
+        this.ready = true;
+        this.setState("connected");
+      };
       socket.onmessage = (event) => { void this.receive(event.data); };
       socket.onerror = (event) => this.options.onError?.(event);
       socket.onclose = (event) => {
         this.ready = false;
         if (!this.stopped && event.code !== 1000) this.scheduleReconnect();
+        else if (!this.stopped) {
+          this.stopped = true;
+          this.setState("stopped");
+        }
       };
     } catch (error) {
       this.options.onError?.(error);
@@ -73,6 +85,11 @@ export class CommentRealtimeClient {
   private async receive(raw: string): Promise<void> {
     try {
       const event = JSON.parse(raw) as RealtimeEnvelope;
+      if (event.type === "ping") {
+        if (this.ready) this.socket?.send(JSON.stringify({ v: 1, type: "pong" }));
+        this.options.onEvent(event);
+        return;
+      }
       if (event.thread_id !== this.options.threadID) return;
       if (event.type === "resync_required") await this.reconcile();
       if (event.sequence !== undefined) {
@@ -97,10 +114,17 @@ export class CommentRealtimeClient {
 
   private scheduleReconnect(): void {
     if (this.reconnectTimer) return;
+    this.setState("reconnecting");
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = undefined;
       void this.connect();
     }, this.options.reconnectDelayMS ?? 1000);
+  }
+
+  private setState(state: RealtimeState): void {
+    if (this.state === state) return;
+    this.state = state;
+    this.options.onState?.(state);
   }
 
   private socketURL(): string {
