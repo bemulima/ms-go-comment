@@ -148,6 +148,9 @@ func TestFrontendSDKContractStaysSynchronized(t *testing.T) {
 	for _, fragment := range []string{"ticket.${ticket.ticket}", "listChanges", "scheduleReconnect"} {
 		assertContains(t, realtime, fragment, "frontend realtime implementation")
 	}
+	for _, fragment := range []string{"RealtimeState", `type: "pong"`, "onState"} {
+		assertContains(t, realtime, fragment, "frontend realtime state implementation")
+	}
 	for _, fragment := range []string{"ticket_in_url: forbidden", "identity: gateway session", "raw HTML is never rendered"} {
 		assertContains(t, contract, fragment, "frontend agent contract")
 	}
@@ -162,18 +165,19 @@ func TestWebComponentContractStaysSynchronized(t *testing.T) {
 		"defineCommentThreadElement", "ms-comment-thread", "textContent", "accessGrant",
 		"ms-comment-ready", "ms-comment-error", "ms-comment-select", "loadMore", "loadReplies",
 		"ms-comment-created", "ms-comment-replies-loaded",
+		"ms-comment-realtime-state", "ms-comment-reconciled", "ms-comment-typing", "ms-comment-thread-updated",
 	} {
 		assertContains(t, element, fragment, "Web Component implementation")
 		assertContains(t, contract, fragment, "Web Component agent contract")
 	}
-	for _, fragment := range []string{"uploadAttachment", "crypto.randomUUID", "safeHTTPURL", "max_image_bytes", "CommentAPIError"} {
+	for _, fragment := range []string{"uploadAttachment", "crypto.randomUUID", "safeHTTPURL", "max_image_bytes", "CommentAPIError", "CommentRealtimeClient"} {
 		assertContains(t, element, fragment, "Web Component implementation")
 	}
 	for _, fragment := range []string{
 		"accessGrant property only; forbidden in markup", "independent opaque cursor pagination",
 		"backend effective policy and authorization are authoritative", "client UUID idempotency key",
 		"retains the exact payload and idempotency key", "cleanup after explicit 4xx rejection",
-		"stage before create", "live WebSocket binding",
+		"stage before create", "in-place comment/policy reconciliation", "draft and branch preservation",
 	} {
 		assertContains(t, contract, fragment, "Web Component boundary contract")
 	}
