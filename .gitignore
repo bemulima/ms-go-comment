@@ -7,3 +7,6 @@
 *.dylib
 coverage.out
 docker-compose.override.yml
+web/node_modules/
+web/dist/
+web/coverage/

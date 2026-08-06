@@ -53,6 +53,7 @@ git-backed repositories under `/Users/marat/Developments/microservices`.
 - `internal/domain`: entities, repository contracts, shared errors/events.
 - `db/migrations`: reversible versioned schema SQL applied to the service-owned PostgreSQL database.
 - `test`: integration-style HTTP/router tests; add more alongside features.
+- `web`: framework-agnostic TypeScript browser SDK; keep transport/reconciliation separate from UI rendering.
 
 ## Build, Test, and Development Commands
 - `task up` or `docker-compose up --build`: start service + Postgres + NATS locally.
@@ -60,6 +61,7 @@ git-backed repositories under `/Users/marat/Developments/microservices`.
 - `task migrate` or `make migrate`: apply SQL migrations inside the Postgres container (sorted order).
 - `task test` or `go test ./...`: run Go unit/integration tests with local build cache `.cache/go-build`.
 - `task down` or `docker-compose down -v`: stop stack and clean volumes.
+- `make web-test` / `make web-build`: verify or build the browser SDK.
 
 ## Coding Style & Naming Conventions
 - Follow standard Go style; run `gofmt`/`goimports` before committing.

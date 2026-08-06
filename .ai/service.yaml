@@ -93,6 +93,11 @@ capabilities:
       confidence: 0.98
       source_path: internal/adapters/http/middleware/guardrails.go
       explanation: Per-instance protection is memory-bounded and complements gateway-level multi-instance controls.
+    - name: headless_browser_sdk
+      value: Typed REST, private grant, realtime ticket, reconnect, and sequence reconciliation client
+      confidence: 0.98
+      source_path: web/src/index.ts
+      explanation: Framework-agnostic SDK centralizes browser transport without accepting identity headers or rendering untrusted content.
 relations:
     - name: depends_on
       value: postgres
@@ -119,6 +124,7 @@ contracts:
     - .ai/contracts/http.yaml
     - .ai/contracts/websocket.yaml
     - .ai/contracts/events.yaml
+    - .ai/contracts/frontend.yaml
 instructions:
     - AGENTS.md
     - prompts/git-workflow.md
@@ -133,6 +139,8 @@ commands:
     - lint
     - validate_contracts
     - migrate_local
+    - web_test
+    - web_build
 workflows:
     - .ai/workflows/implement-feature.yaml
     - .ai/workflows/change-contract.yaml
