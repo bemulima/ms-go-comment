@@ -10,6 +10,7 @@ purpose: >-
     It owns spaces, threads, multi-level comments, attachment bindings, moderation
     state, realtime sequencing, WebSocket tickets, and outbox delivery. It does
     not own host resources, user profiles, or binary file bytes.
+release_contract_map: docs/agent-contract-map.md
 stack:
     - name: language
       value: go

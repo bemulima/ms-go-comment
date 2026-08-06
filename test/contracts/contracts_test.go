@@ -82,8 +82,10 @@ func TestAgentMapNamesOwnedBoundariesAndDeferredScope(t *testing.T) {
 
 	contractMap := read(t, "docs/agent-contract-map.md")
 	for _, fragment := range []string{
-		"Implemented in backend v1", "Deferred after backend v1", "ms-gateway", "ms-go-filestorage",
+		"Implemented in Backend v2", "Role and access matrix", "End-to-end private integration",
+		"Deferred after Backend v2", "ms-gateway", "ms-go-filestorage",
 		"comment_space", "comment_thread", "comment_outbox", "comment_access_grant", "GET /api/v1/ws", "comment.created",
+		"X-Comment-Access-Grant", "X-Internal-Token", "ticket.<opaque>",
 	} {
 		assertContains(t, contractMap, fragment, "agent contract map")
 	}

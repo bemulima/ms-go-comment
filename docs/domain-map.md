@@ -61,6 +61,7 @@ Database transaction
 10. Reconcile missed realtime frames through the REST changes feed.
 11. Configure spaces/threads and moderate comments through admin APIs.
 12. Grant access to private host resources through trusted internal APIs.
+13. Enforce bounded HTTP guardrails and stable failure envelopes at the adapter boundary.
 
 ## Contract index
 

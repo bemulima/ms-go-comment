@@ -10,7 +10,7 @@ PostgreSQL persistence, thread/comment REST, validated FileStorage attachments,
 transactional outbox delivery through NATS JetStream, single-use realtime
 tickets, and the thread-scoped WebSocket projection are implemented. Start with the
 [domain map](docs/domain-map.md) and the final
-[agent contract map](docs/agent-contract-map.md).
+[Backend v2 agent contract map](docs/agent-contract-map.md).
 
 Space/thread-policy administration and comment hide/restore moderation are
 available under `/admin/v1`. Trusted host services use `/internal/v1` to ensure
