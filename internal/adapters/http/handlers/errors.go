@@ -31,6 +31,8 @@ func errorContract(err error) (int, string, string) {
 		return http.StatusForbidden, "comment_access_required", "comment access grant is required"
 	case errors.Is(err, domain.ErrForbidden):
 		return http.StatusForbidden, "comment_forbidden", "comment operation is not allowed"
+	case errors.Is(err, domain.ErrRateLimited):
+		return http.StatusTooManyRequests, "rate_limited", "comment request rate limit was exceeded"
 	case errors.Is(err, domain.ErrSpaceNotFound):
 		return http.StatusNotFound, "space_not_found", "comment space was not found"
 	case errors.Is(err, domain.ErrThreadNotFound):

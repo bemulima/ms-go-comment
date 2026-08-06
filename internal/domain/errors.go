@@ -21,6 +21,7 @@ var (
 	ErrConflict               = errors.New("conflict")
 	ErrAuthenticationRequired = errors.New("authentication required")
 	ErrInternalAuthentication = errors.New("internal authentication failed")
+	ErrRateLimited            = errors.New("rate limited")
 	ErrAccessRequired         = errors.New("comment access required")
 	ErrForbidden              = errors.New("comment operation forbidden")
 	ErrThreadNotWritable      = errors.New("thread is not writable")

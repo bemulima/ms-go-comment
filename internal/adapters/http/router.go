@@ -16,11 +16,15 @@ type RouterDependencies struct {
 	RealtimeService  handlers.RealtimeService
 	InternalService  handlers.InternalService
 	InternalToken    string
+	UserRateLimiter  httpmw.ActorLimiter
 	WebSocketHandler http.Handler
 }
 
 func NewRouter(deps RouterDependencies) http.Handler {
 	router := chi.NewRouter()
+	router.Use(httpmw.SecurityHeaders)
+	router.Use(httpmw.RequestID)
+	router.Use(httpmw.RecoverPanics(handlers.WriteError))
 	router.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "ms-go-comment"})
 	})
@@ -29,6 +33,9 @@ func NewRouter(deps RouterDependencies) http.Handler {
 		router.Route("/api/v1", func(api chi.Router) {
 			api.Use(httpmw.RequireActor(handlers.WriteError))
 			api.Use(httpmw.CaptureAccessGrant)
+			if deps.UserRateLimiter != nil {
+				api.Use(httpmw.RateLimitActor(deps.UserRateLimiter, handlers.WriteError))
+			}
 			api.Put("/thread/ensure", handler.EnsureThread)
 			api.Get("/thread/get/{threadID}", handler.GetThread)
 			api.Get("/comment/list", handler.ListComments)
@@ -44,8 +51,13 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	}
 	if deps.RealtimeService != nil {
 		handler := handlers.RealtimeHandler{Service: deps.RealtimeService}
-		router.With(httpmw.RequireActor(handlers.WriteError), httpmw.CaptureAccessGrant).
-			Post("/api/v1/realtime/ticket", handler.MintTicket)
+		middlewares := []func(http.Handler) http.Handler{
+			httpmw.RequireActor(handlers.WriteError), httpmw.CaptureAccessGrant,
+		}
+		if deps.UserRateLimiter != nil {
+			middlewares = append(middlewares, httpmw.RateLimitActor(deps.UserRateLimiter, handlers.WriteError))
+		}
+		router.With(middlewares...).Post("/api/v1/realtime/ticket", handler.MintTicket)
 	}
 	if deps.InternalService != nil {
 		router.Mount("/internal/v1", internalhttp.NewRouter(deps.InternalService, deps.InternalToken))
