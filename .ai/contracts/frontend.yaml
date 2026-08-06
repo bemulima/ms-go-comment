@@ -1,5 +1,5 @@
 schema_version: 1
-status: headless_sdk_and_web_component_shell_implemented
+status: headless_sdk_tree_composer_and_attachments_implemented
 source_of_truth: web/README.md
 package: '@bemulima/ms-comment-client'
 location: web
@@ -8,6 +8,7 @@ boundaries:
     private_access: optional X-Comment-Access-Grant provider
     internal_token: forbidden
     html_rendering: outside headless SDK; raw HTML is never rendered
+    policy_authority: browser guidance is advisory; backend effective policy and authorization are authoritative
 rest:
     source: web/src/client.ts
     base_path_default: /api/comment/v1
@@ -37,17 +38,27 @@ web_component:
     methods:
         - refresh
         - loadMore
+        - loadReplies
     events:
         - ms-comment-ready
         - ms-comment-error
         - ms-comment-select
-    rendering: comment content uses textContent and is never interpreted as HTML
-    states: loading, empty, error, ready, pagination
+        - ms-comment-reply-start
+        - ms-comment-replies-loaded
+        - ms-comment-attachment-uploaded
+        - ms-comment-created
+    tree: roots and each direct-child branch own independent opaque cursor pagination
+    composer: root and reply create with client UUID idempotency key; hidden unless thread is open
+    ambiguous_create: network/5xx retains the exact payload and idempotency key for explicit retry; no attachment cleanup
+    policy_ux: max depth/body/attachments/image bytes plus link and image flags come from effective thread policy
+    attachments: JPEG/PNG/WebP stage before create, bind by ID, cleanup after explicit 4xx rejection, ready preview through signed URL
+    rendering: bodies and filenames use textContent; only checked HTTP(S) links and signed image URLs become attributes
+    accessibility: native button, form, label, details/summary and live-region semantics
+    states: loading, empty, error, ready, root pagination, branch pagination, submitting
     deferred:
-        - nested tree rendering
-        - composer and mutations
-        - attachments
         - live WebSocket binding
+        - edit and delete controls
+        - moderation and admin controls
 tests:
     - web/test/client.test.mjs
     - web/test/element.test.mjs
