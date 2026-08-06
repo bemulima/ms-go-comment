@@ -9,6 +9,8 @@ The initial schema is implemented by the reversible pair
 tables in reverse dependency order and deliberately does not use `CASCADE`.
 `002_attachment_delivery.up.sql` / `.down.sql` adds only retry/delivery evidence
 to `comment_attachment` plus partial worker indexes.
+`003_access_grants.up.sql` / `.down.sql` adds the private-resource grant table
+and its cleanup index.
 
 ### `comment_space`
 
@@ -62,11 +64,25 @@ removed in bounded cleanup batches.
 Permissions use a bit mask: `read=1`, `write=2`, `upload=4`; every ticket must
 include `read`. Only the 32-byte SHA-256 ticket hash is persisted.
 
+### `comment_access_grant`
+
+Owns only the SHA-256 hash of a random 256-bit grant, its issuer, authenticated
+user, space/resource binding, permission mask, creation time, and expiry. The
+raw grant is returned once and never persisted. The space foreign key cascades
+on hard administrative cleanup; normal space deletion remains soft-disable.
+
+Permissions use the same bits as realtime tickets: `read=1`, `write=2`, and
+`upload=4`. The database requires `read` and permits `upload` only when `write`
+is also present. Expiry must follow creation. The `(expires_at, grant_hash)`
+index supports bounded `FOR UPDATE SKIP LOCKED` cleanup batches.
+
 ## Transaction invariants
 
 - Thread sequence allocation, comment mutation, counters, attachment binding, and outbox insertion are atomic.
 - NATS and FileStorage network calls do not execute inside a long-running database transaction.
 - Attachment activation is retriable and represented explicitly as processing/ready/failed.
+- Access grant raw secrets are never persisted and resolve only for their bound
+  user, space/resource tuple, permissions, and unexpired lifetime.
 - Hard deletion is not part of the normal user API.
 
 ## Code boundary

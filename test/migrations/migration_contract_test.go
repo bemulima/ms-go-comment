@@ -118,6 +118,20 @@ func TestMigrationPairsAndAttachmentDeliveryEvidence(t *testing.T) {
 			t.Errorf("attachment delivery migration is missing %q", fragment)
 		}
 	}
+	grants := readMigration(t, "003_access_grants.up.sql")
+	for _, fragment := range []string{
+		"CREATE TABLE comment_access_grant", "grant_hash BYTEA PRIMARY KEY", "octet_length(grant_hash) = 32",
+		"permissions BETWEEN 1 AND 7", "(permissions & 1) = 1", "expires_at > created_at",
+		"ON DELETE CASCADE", "idx_comment_access_grant_expiry",
+	} {
+		if !strings.Contains(grants, fragment) {
+			t.Errorf("access grant migration is missing %q", fragment)
+		}
+	}
+	grantDown := readMigration(t, "003_access_grants.down.sql")
+	if strings.Contains(strings.ToUpper(grantDown), "CASCADE") || !strings.Contains(grantDown, "DROP TABLE comment_access_grant;") {
+		t.Errorf("access grant down migration must drop only its table without CASCADE")
+	}
 }
 
 func readMigration(t *testing.T, name string) string {

@@ -184,6 +184,42 @@ func TestService_AccessAndWritableState(t *testing.T) {
 	}
 }
 
+func TestService_ContextGrantPermissions(t *testing.T) {
+	t.Parallel()
+
+	service, store, actor, thread := newFixture()
+	space := store.spaces[thread.SpaceID]
+	space.AccessMode = domain.AccessModeContextGrant
+	store.spaces[space.ID] = space
+	access := &fakeAccess{permissions: domain.AccessPermissionRead}
+	service.Access = access
+
+	if _, err := service.GetThread(context.Background(), actor, thread.ID); err != nil {
+		t.Fatalf("GetThread() error = %v", err)
+	}
+	if access.calls != 1 || access.resource != thread.Resource {
+		t.Fatalf("access calls=%d resource=%#v", access.calls, access.resource)
+	}
+	if _, err := service.CreateComment(context.Background(), actor, commentuc.CreateCommentInput{
+		ThreadID: thread.ID, Body: "hello", IdempotencyKey: uuid.New(),
+	}); !errors.Is(err, domain.ErrForbidden) {
+		t.Fatalf("CreateComment() error = %v", err)
+	}
+	access.permissions |= domain.AccessPermissionWrite
+	service.NewID = idSequence(uuid.New(), uuid.New())
+	replayKey := uuid.New()
+	input := commentuc.CreateCommentInput{
+		ThreadID: thread.ID, Body: "hello", IdempotencyKey: replayKey,
+	}
+	if _, err := service.CreateComment(context.Background(), actor, input); err != nil {
+		t.Fatalf("CreateComment() with write error = %v", err)
+	}
+	access.err = domain.ErrAccessRequired
+	if _, err := service.CreateComment(context.Background(), actor, input); !errors.Is(err, domain.ErrAccessRequired) {
+		t.Fatalf("CreateComment() replay without current grant error = %v", err)
+	}
+}
+
 func TestService_ReadListAndReconcileViews(t *testing.T) {
 	t.Parallel()
 
@@ -302,6 +338,19 @@ type fakeThreads struct{ *fakeStore }
 type fakeComments struct{ *fakeStore }
 type fakeAttachments struct{ *fakeStore }
 type fakeOutbox struct{ *fakeStore }
+
+type fakeAccess struct {
+	permissions domain.AccessPermission
+	err         error
+	calls       int
+	resource    domain.ResourceReference
+}
+
+func (f *fakeAccess) Permissions(_ context.Context, _ domain.Actor, _ domain.Space, resource domain.ResourceReference) (domain.AccessPermission, error) {
+	f.calls++
+	f.resource = resource
+	return f.permissions, f.err
+}
 
 func (s fakeTx) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
 	s.fakeStore.txCalls++

@@ -15,6 +15,7 @@ Initial stable codes include:
 | Code | Status | Meaning |
 | --- | --- | --- |
 | `authentication_required` | 401 | Missing authenticated actor |
+| `internal_authentication_failed` | 403 | Missing or wrong internal service token |
 | `comment_access_required` | 403 | Missing/insufficient private-resource grant |
 | `comment_forbidden` | 403 | Actor cannot perform the operation |
 | `space_not_found` | 404 | Space does not exist or is unavailable |
@@ -32,6 +33,7 @@ Initial stable codes include:
 | `images_disabled` | 422 | Effective policy forbids new images |
 | `links_disabled` | 422 | Effective policy forbids links |
 | `invalid_comment_content` | 422 | Content/attachments violate the contract |
+| `invalid_access_grant` | 422 | Grant request has invalid binding, permissions, or TTL |
 | `rate_limited` | 429 | Actor or connection limit exceeded |
 | `realtime_ticket_invalid` | 401 | Ticket is absent, expired, or already consumed |
 | `internal_error` | 500 | Unexpected server-side failure; details are not exposed |

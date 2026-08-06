@@ -16,6 +16,7 @@ import (
 	pgadapter "github.com/bemulima/ms-go-comment/internal/adapters/postgres"
 	websocketadapter "github.com/bemulima/ms-go-comment/internal/adapters/websocket"
 	"github.com/bemulima/ms-go-comment/internal/config"
+	accessuc "github.com/bemulima/ms-go-comment/internal/usecase/access"
 	adminuc "github.com/bemulima/ms-go-comment/internal/usecase/admin"
 	commentuc "github.com/bemulima/ms-go-comment/internal/usecase/comment"
 	realtimeuc "github.com/bemulima/ms-go-comment/internal/usecase/realtime"
@@ -47,6 +48,11 @@ func main() {
 	attachments := pgadapter.AttachmentRepository{Pool: pool}
 	outbox := pgadapter.OutboxRepository{Pool: pool}
 	tickets := pgadapter.RealtimeTicketRepository{Pool: pool}
+	grants := pgadapter.AccessGrantRepository{Pool: pool}
+	accessService := &accessuc.Service{
+		Spaces: spaces, Threads: threads, Grants: grants,
+		MaximumTTL: time.Duration(cfg.AccessGrantMaxTTLSeconds) * time.Second,
+	}
 	fileStorage := filestorageadapter.Client{BaseURL: cfg.FileStorageServiceBaseURL}
 	commentService := &commentuc.Service{
 		Spaces: spaces, Threads: threads, Comments: comments, Attachments: attachments,
@@ -54,6 +60,7 @@ func main() {
 		AttachmentTTLMinutes:  cfg.AttachmentTTLMinutes,
 		SignedURLMinutes:      cfg.AttachmentSignedURLMinutes,
 		ActivationMaxAttempts: cfg.AttachmentActivationAttempts,
+		Access:                accessService,
 	}
 	adminService := &adminuc.Service{
 		Spaces: spaces, Threads: threads, Comments: comments, Attachments: attachments,
@@ -61,7 +68,8 @@ func main() {
 	}
 	realtimeService := &realtimeuc.TicketService{
 		Spaces: spaces, Threads: threads, Tickets: tickets,
-		TTL: time.Duration(cfg.RealtimeTicketTTLSeconds) * time.Second,
+		Access: accessService,
+		TTL:    time.Duration(cfg.RealtimeTicketTTLSeconds) * time.Second,
 	}
 	dispatcher := &realtimeuc.Dispatcher{
 		Outbox: outbox, Lease: time.Duration(cfg.OutboxLeaseSeconds) * time.Second,
@@ -103,6 +111,8 @@ func main() {
 		routerDependencies.CommentService = commentService
 		routerDependencies.AdminService = adminService
 		routerDependencies.RealtimeService = realtimeService
+		routerDependencies.InternalService = accessService
+		routerDependencies.InternalToken = cfg.InternalAPIToken
 	}
 	if modeHasRealtime(cfg.ServiceMode) {
 		routerDependencies.WebSocketHandler = websocketHandler
@@ -118,7 +128,7 @@ func main() {
 	defer stop()
 	var workers sync.WaitGroup
 	if modeHasWorkers(cfg.ServiceMode) {
-		workers.Add(3)
+		workers.Add(4)
 		go func() {
 			defer workers.Done()
 			runAttachmentWorker(ctx, logger, commentService, time.Duration(cfg.AttachmentWorkerInterval)*time.Second, cfg.AttachmentWorkerBatch)
@@ -130,6 +140,10 @@ func main() {
 		go func() {
 			defer workers.Done()
 			runTicketCleanupWorker(ctx, logger, realtimeService, time.Duration(cfg.RealtimeTicketCleanupSeconds)*time.Second, cfg.OutboxWorkerBatch)
+		}()
+		go func() {
+			defer workers.Done()
+			runAccessGrantCleanupWorker(ctx, logger, accessService, time.Duration(cfg.AccessGrantCleanupSeconds)*time.Second, cfg.OutboxWorkerBatch)
 		}()
 	}
 
@@ -232,6 +246,29 @@ func runTicketCleanupWorker(ctx context.Context, logger *zap.Logger, service *re
 				logger.Error("realtime ticket cleanup failed", zap.Error(err))
 			} else if deleted > 0 {
 				logger.Info("realtime ticket cleanup completed", zap.Int("deleted", deleted))
+			}
+		}
+	}
+}
+
+func runAccessGrantCleanupWorker(ctx context.Context, logger *zap.Logger, service *accessuc.Service, interval time.Duration, batch int) {
+	if interval <= 0 {
+		interval = time.Minute
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			deleted, err := service.DeleteExpired(ctx, batch)
+			if err != nil {
+				logger.Error("access grant cleanup failed", zap.Error(err))
+				continue
+			}
+			if deleted > 0 {
+				logger.Info("access grant cleanup completed", zap.Int("deleted", deleted))
 			}
 		}
 	}

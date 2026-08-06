@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/bemulima/ms-go-comment/internal/adapters/http/handlers"
+	internalhttp "github.com/bemulima/ms-go-comment/internal/adapters/http/internal"
 	httpmw "github.com/bemulima/ms-go-comment/internal/adapters/http/middleware"
 	"github.com/go-chi/chi/v5"
 )
@@ -13,6 +14,8 @@ type RouterDependencies struct {
 	CommentService   handlers.CommentService
 	AdminService     handlers.AdminService
 	RealtimeService  handlers.RealtimeService
+	InternalService  handlers.InternalService
+	InternalToken    string
 	WebSocketHandler http.Handler
 }
 
@@ -25,6 +28,7 @@ func NewRouter(deps RouterDependencies) http.Handler {
 		handler := handlers.CommentHandler{Service: deps.CommentService}
 		router.Route("/api/v1", func(api chi.Router) {
 			api.Use(httpmw.RequireActor(handlers.WriteError))
+			api.Use(httpmw.CaptureAccessGrant)
 			api.Put("/thread/ensure", handler.EnsureThread)
 			api.Get("/thread/get/{threadID}", handler.GetThread)
 			api.Get("/comment/list", handler.ListComments)
@@ -40,7 +44,11 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	}
 	if deps.RealtimeService != nil {
 		handler := handlers.RealtimeHandler{Service: deps.RealtimeService}
-		router.With(httpmw.RequireActor(handlers.WriteError)).Post("/api/v1/realtime/ticket", handler.MintTicket)
+		router.With(httpmw.RequireActor(handlers.WriteError), httpmw.CaptureAccessGrant).
+			Post("/api/v1/realtime/ticket", handler.MintTicket)
+	}
+	if deps.InternalService != nil {
+		router.Mount("/internal/v1", internalhttp.NewRouter(deps.InternalService, deps.InternalToken))
 	}
 	if deps.AdminService != nil {
 		handler := handlers.AdminHandler{Service: deps.AdminService}

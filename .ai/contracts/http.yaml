@@ -1,5 +1,5 @@
 schema_version: 1
-status: user_realtime_and_admin_routes_implemented_internal_deferred
+status: user_realtime_admin_and_internal_routes_implemented
 source_of_truth: docs/http-contract.md
 route_groups:
     - prefix: /api/v1
@@ -33,8 +33,8 @@ route_groups:
         - PUT /comment/hide/{commentID}
         - PUT /comment/restore/{commentID}
     - prefix: /internal/v1
-      status: deferred
-      authentication: X-Internal-Token
+      status: implemented
+      authentication: exact configured X-Internal-Token on trusted service network
       routes:
         - POST /access-grant/create
         - POST /thread/ensure
@@ -63,6 +63,9 @@ implemented_routes:
     - PUT /admin/v1/thread/update/{threadID}
     - PUT /admin/v1/comment/hide/{commentID}
     - PUT /admin/v1/comment/restore/{commentID}
+    - POST /internal/v1/access-grant/create
+    - POST /internal/v1/thread/ensure
+    - GET /internal/v1/thread/get-by-resource
 implementation:
     router: internal/adapters/http/router.go
     handlers: internal/adapters/http/handlers/comment.go
@@ -74,12 +77,19 @@ implementation:
     websocket_handler: internal/adapters/websocket/handler.go
     admin_handler: internal/adapters/http/handlers/admin.go
     admin_usecase: internal/usecase/admin/service.go
+    internal_router: internal/adapters/http/internal/router.go
+    internal_handler: internal/adapters/http/handlers/internal.go
+    access_usecase: internal/usecase/access/service.go
+    access_repository: internal/adapters/postgres/access_grant_repository.go
 authentication:
     headers:
         - X-User-ID as UUID
         - X-User-Role as non-empty non-GUEST role
     actor_fields_in_body: rejected
     websocket: single-use ticket in Sec-WebSocket-Protocol; gateway actor headers are not used
+    private_resource_header: X-Comment-Access-Grant on authenticated REST and realtime ticket minting
+    private_resource_binding: issuer + user_id + space/resource tuple + permissions + expiry
+    internal_header: exact X-Internal-Token
 pagination:
     default_limit: 20
     maximum_limit: 100

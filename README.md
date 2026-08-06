@@ -4,7 +4,8 @@
 
 ## Status
 
-The first authenticated discussion and realtime backend slice is complete.
+The authenticated discussion, realtime, administration, moderation, and
+private-resource access-grant backend slices are complete.
 PostgreSQL persistence, thread/comment REST, validated FileStorage attachments,
 transactional outbox delivery through NATS JetStream, single-use realtime
 tickets, and the thread-scoped WebSocket projection are implemented. Start with the
@@ -12,8 +13,9 @@ tickets, and the thread-scoped WebSocket projection are implemented. Start with 
 [agent contract map](docs/agent-contract-map.md).
 
 Space/thread-policy administration and comment hide/restore moderation are
-available under `/admin/v1`. Private-resource grants under `/internal/v1`
-remain designed contracts, not registered runtime routes.
+available under `/admin/v1`. Trusted host services use `/internal/v1` to ensure
+private threads and mint short-lived grants; browsers present those grants as
+`X-Comment-Access-Grant` on `/api/v1` calls.
 
 ## Architecture
 
@@ -40,8 +42,16 @@ make validate-contracts
 
 The service exposes `GET /healthz`. `SERVICE_MODE` supports `all`, `api`,
 `realtime`, and `worker`; the default `all` process runs REST, WebSocket fan-out,
-attachment cleanup, ticket cleanup, and the outbox dispatcher.
+attachment cleanup, ticket cleanup, access-grant cleanup, and the outbox
+dispatcher.
 
 ## Security boundary
 
-The service accepts `X-User-ID` and `X-User-Role` only from `ms-gateway`. Do not publish the service container directly to untrusted networks. Browser WebSocket connections use a short-lived, single-use ticket obtained through authenticated REST; access tokens are not placed in a WebSocket query string.
+The service accepts `X-User-ID` and `X-User-Role` only from `ms-gateway`. Do not
+publish the service container directly to untrusted networks. Every internal
+route requires the exact configured `X-Internal-Token`. Set
+`ACCESS_GRANT_MAX_TTL_SECONDS` (default 300, hard maximum 900) and
+`ACCESS_GRANT_CLEANUP_SECONDS` (default 60) for private-resource grants. Browser
+WebSocket connections use a short-lived, single-use ticket obtained through
+authenticated REST; access tokens and access grants are not placed in a
+WebSocket query string.

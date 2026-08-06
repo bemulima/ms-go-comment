@@ -99,8 +99,69 @@ func TestTicketService_ConsumeAttenuatesPermissionsAfterThreadCloses(t *testing.
 	}
 }
 
+func TestTicketService_ContextGrantAttenuatesMintedPermissions(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 5, 10, 0, 0, 0, time.UTC)
+	space, thread := realtimeFixture(now)
+	space.AccessMode = domain.AccessModeContextGrant
+	tickets := newFakeTickets()
+	access := realtimeAccess{permissions: domain.AccessPermissionRead}
+	service := realtimeuc.TicketService{
+		Spaces: fakeSpaces{item: space}, Threads: fakeThreads{item: thread}, Tickets: tickets, Access: access,
+		Now: func() time.Time { return now }, Random: bytes.NewReader(bytes.Repeat([]byte{12}, 32)),
+	}
+	actor := domain.Actor{UserID: uuid.New(), Role: "STUDENT"}
+	minted, err := service.Mint(context.Background(), actor, realtimeuc.MintTicketInput{ThreadID: thread.ID})
+	if err != nil {
+		t.Fatalf("Mint() error = %v", err)
+	}
+	if permissions := tickets.only(t).Permissions; permissions != domain.RealtimePermissionRead {
+		t.Fatalf("stored permissions = %d", permissions)
+	}
+
+	// The consumed ticket remains authoritative; the browser does not resend the grant over WebSocket.
+	service.Access = nil
+	session, err := service.Consume(context.Background(), minted.Ticket)
+	if err != nil || session.Permissions != domain.RealtimePermissionRead {
+		t.Fatalf("Consume() session=%#v error=%v", session, err)
+	}
+}
+
+func TestTicketService_ContextGrantUploadRequiresPolicy(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 5, 10, 0, 0, 0, time.UTC)
+	space, thread := realtimeFixture(now)
+	space.AccessMode = domain.AccessModeContextGrant
+	space.Policy.AllowImages = false
+	tickets := newFakeTickets()
+	service := realtimeuc.TicketService{
+		Spaces: fakeSpaces{item: space}, Threads: fakeThreads{item: thread}, Tickets: tickets,
+		Access: realtimeAccess{permissions: domain.FullAccessPermissions()},
+		Now:    func() time.Time { return now }, Random: bytes.NewReader(bytes.Repeat([]byte{13}, 32)),
+	}
+	_, err := service.Mint(context.Background(), domain.Actor{UserID: uuid.New(), Role: "STUDENT"}, realtimeuc.MintTicketInput{ThreadID: thread.ID})
+	if err != nil {
+		t.Fatalf("Mint() error = %v", err)
+	}
+	want := domain.RealtimePermissionRead | domain.RealtimePermissionWrite
+	if permissions := tickets.only(t).Permissions; permissions != want {
+		t.Fatalf("stored permissions = %d, want %d", permissions, want)
+	}
+}
+
 type fakeTickets struct {
 	items map[string]domain.RealtimeTicket
+}
+
+type realtimeAccess struct {
+	permissions domain.AccessPermission
+	err         error
+}
+
+func (f realtimeAccess) Permissions(context.Context, domain.Actor, domain.Space, domain.ResourceReference) (domain.AccessPermission, error) {
+	return f.permissions, f.err
 }
 
 func newFakeTickets() *fakeTickets {

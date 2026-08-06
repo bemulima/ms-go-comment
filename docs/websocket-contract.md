@@ -10,6 +10,12 @@ WebSocket is a realtime projection of REST-owned state. Durable comment create/u
 4. The WebSocket adapter validates `Origin`, atomically consumes the hashed ticket, binds the connection to its user/thread/permissions/requested sequence, and selects `comment.v1`.
 
 Access tokens must not be put in WebSocket URLs. A ticket is single-use and thread-scoped.
+For a `context_grant` space, ticket minting also requires
+`X-Comment-Access-Grant`. Stored ticket permissions are the intersection of the
+grant, current thread state, and effective image policy. The WebSocket handshake
+does not accept or re-resolve the access grant; the consumed ticket is
+authoritative for that connection and is attenuated again if the thread closes
+or image policy is disabled before consumption.
 The exact `Origin` must be present in the owning space allowlist. Missing or
 different origins fail the handshake. Query-string `ticket` and `access_token`
 credentials are rejected before upgrade.

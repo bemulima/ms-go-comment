@@ -35,6 +35,12 @@ migrate:
 		echo "Attachment delivery migration already applied"; \
 	else \
 		docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-ms_comment}" < db/migrations/002_attachment_delivery.up.sql; \
+	fi; \
+	has_access_grants=$$(docker compose exec -T postgres psql -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-ms_comment}" -tAc "SELECT to_regclass('public.comment_access_grant') IS NOT NULL;"); \
+	if [ "$$has_access_grants" = "t" ]; then \
+		echo "Access grant migration already applied"; \
+	else \
+		docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-ms_comment}" < db/migrations/003_access_grants.up.sql; \
 	fi
 
 up:

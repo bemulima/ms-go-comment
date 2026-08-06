@@ -29,6 +29,7 @@ CommentSpace
 CommentThread
 ├── CommentAttachment
 ├── RealtimeTicket
+├── AccessGrant (space/resource scoped)
 └── monotonically increasing sequence
 
 Database transaction
@@ -43,6 +44,8 @@ Database transaction
 - `CommentAttachment` stages and authorizes user media while FileStorage owns bytes.
 - `OutboxEvent` makes committed mutations eventually publishable without losing them during a broker outage.
 - `RealtimeTicket` authenticates one browser WebSocket handshake without exposing an access token in the URL.
+- `AccessGrant` authorizes one authenticated user for an exact private host
+  resource and bounded read/write/upload permissions.
 
 ## Business processes
 

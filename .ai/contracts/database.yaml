@@ -8,6 +8,9 @@ migrations:
     - up: db/migrations/002_attachment_delivery.up.sql
       down: db/migrations/002_attachment_delivery.down.sql
       issue: 5
+    - up: db/migrations/003_access_grants.up.sql
+      down: db/migrations/003_access_grants.down.sql
+      issue: 20
 owned_tables:
     - name: comment_space
       issue: 3
@@ -32,6 +35,10 @@ owned_tables:
       domain_source: internal/domain/realtime_ticket.go
       lifecycle_issue: 6
       repository_source: internal/adapters/postgres/realtime_ticket_repository.go
+    - name: comment_access_grant
+      issue: 20
+      domain_source: internal/domain/access_grant.go
+      repository_source: internal/adapters/postgres/access_grant_repository.go
 invariants:
     - one thread per exact space/resource tuple
     - reply parent and root belong to the same thread
@@ -43,6 +50,7 @@ invariants:
     - realtime ticket preserves the optional requested last_sequence until atomic handshake consumption
     - outbox claim commits a finite retry lease before any NATS network call
     - realtime ticket raw secret is never persisted and consume deletes it atomically
+    - access grant raw secret is never persisted and resolves only for its bound user, space/resource tuple, permissions, and expiry
 migration_policy:
     directory: db/migrations
     format: ordered reversible up/down pairs

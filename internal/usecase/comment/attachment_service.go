@@ -36,7 +36,7 @@ func (s Service) UploadAttachment(ctx context.Context, actor domain.Actor, input
 	if s.Files == nil {
 		return domain.Attachment{}, errors.New("filestorage adapter is not configured")
 	}
-	thread, _, policy, err := s.loadThreadContext(ctx, actor, input.ThreadID, true)
+	thread, _, policy, err := s.loadThreadContext(ctx, actor, input.ThreadID, domain.AccessPermissionUpload)
 	if err != nil {
 		return domain.Attachment{}, err
 	}
@@ -96,7 +96,7 @@ func (s Service) GetAttachmentSignedURL(ctx context.Context, actor domain.Actor,
 	if err != nil || comment.Status != domain.CommentStatusActive {
 		return SignedFileURL{}, domain.ErrAttachmentNotFound
 	}
-	if _, _, _, err := s.loadThreadContext(ctx, actor, comment.ThreadID, false); err != nil {
+	if _, _, _, err := s.loadThreadContext(ctx, actor, comment.ThreadID, domain.AccessPermissionRead); err != nil {
 		return SignedFileURL{}, err
 	}
 	minutes := s.signedURLMinutes()
@@ -124,7 +124,7 @@ func (s Service) DeleteAttachment(ctx context.Context, actor domain.Actor, attac
 			result = attachment
 			return nil
 		}
-		thread, _, policy, err := s.loadThreadContext(txCtx, actor, attachment.ThreadID, true)
+		thread, _, policy, err := s.loadThreadContext(txCtx, actor, attachment.ThreadID, domain.AccessPermissionWrite)
 		if err != nil {
 			return err
 		}

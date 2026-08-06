@@ -32,7 +32,7 @@ func TestImplementedHTTPRoutesStaySynchronized(t *testing.T) {
 		assertContains(t, router, registrations[index], "router registration")
 		assertContains(t, httpContract, implemented[index], "machine-readable implemented route")
 	}
-	assertContains(t, httpContract, "status: deferred", "admin/internal implementation status")
+	assertContains(t, httpContract, "status: user_realtime_admin_and_internal_routes_implemented", "HTTP implementation status")
 	for _, fragment := range []string{
 		`admin.Post("/space/create"`, `admin.Get("/space/get/{spaceID}"`, `admin.Get("/space/list"`,
 		`admin.Put("/space/update/{spaceID}"`, `admin.Delete("/space/delete/{spaceID}"`,
@@ -40,6 +40,18 @@ func TestImplementedHTTPRoutesStaySynchronized(t *testing.T) {
 		`admin.Put("/comment/hide/{commentID}"`, `admin.Put("/comment/restore/{commentID}"`,
 	} {
 		assertContains(t, router, fragment, "admin router registration")
+	}
+	internalRouter := read(t, "internal/adapters/http/internal/router.go")
+	assertContains(t, router, `router.Mount("/internal/v1"`, "internal router mount")
+	for _, fragment := range []string{
+		`router.Post("/access-grant/create"`, `router.Post("/thread/ensure"`, `router.Get("/thread/get-by-resource"`,
+	} {
+		assertContains(t, internalRouter, fragment, "internal router registration")
+	}
+	for _, route := range []string{
+		"POST /internal/v1/access-grant/create", "POST /internal/v1/thread/ensure", "GET /internal/v1/thread/get-by-resource",
+	} {
+		assertContains(t, httpContract, route, "machine-readable internal route")
 	}
 }
 
@@ -71,7 +83,7 @@ func TestAgentMapNamesOwnedBoundariesAndDeferredScope(t *testing.T) {
 	contractMap := read(t, "docs/agent-contract-map.md")
 	for _, fragment := range []string{
 		"Implemented in backend v1", "Deferred after backend v1", "ms-gateway", "ms-go-filestorage",
-		"comment_space", "comment_thread", "comment_outbox", "GET /api/v1/ws", "comment.created",
+		"comment_space", "comment_thread", "comment_outbox", "comment_access_grant", "GET /api/v1/ws", "comment.created",
 	} {
 		assertContains(t, contractMap, fragment, "agent contract map")
 	}
