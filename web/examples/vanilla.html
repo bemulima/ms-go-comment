@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ms-go-comment vanilla integration</title>
+  <style>
+    ms-comment-thread {
+      --ms-comment-action: #174ea6;
+      --ms-comment-background: #fff;
+      --ms-comment-border: #c7d2e0;
+      --ms-comment-radius: 1rem;
+      --ms-comment-space: 1.25rem;
+      display: block;
+      margin: 2rem auto;
+      max-width: 48rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <ms-comment-thread
+      base-url="/api/comment/v1"
+      space-key="course.public"
+      resource-type="lesson"
+      resource-id="lesson-1"
+      heading="Lesson discussion"
+      page-size="20"
+      realtime
+    ></ms-comment-thread>
+  </main>
+  <script type="module">
+    import { defineCommentThreadElement } from "../dist/element.js";
+
+    defineCommentThreadElement();
+    const comments = document.querySelector("ms-comment-thread");
+
+    // For a private resource, obtain a short-lived grant from the trusted host
+    // backend and assign it as a property. Never serialize it into markup.
+    // comments.accessGrant = await hostGrantForCurrentResource();
+
+    comments.addEventListener("ms-comment-error", ({ detail }) => {
+      console.error("Comment integration error", detail.operation, detail.error);
+    });
+  </script>
+</body>
+</html>

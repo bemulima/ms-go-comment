@@ -144,8 +144,13 @@ UX guidance; backend policy and authorization remain authoritative. Optional
 realtime starts only after REST state, uses single-use subprotocol tickets,
 reports connection/reconnect state, answers application ping/pong, applies
 comment/policy reconciliation in place, and preserves drafts plus loaded
-branches. Edit/delete controls and final integration examples remain later
-frontend slices under issue #26.
+branches. Edit/delete controls remain outside the current widget slice.
+
+The deployable host contract is [frontend-integration.md](frontend-integration.md).
+It fixes the gateway/private-grant boundary, exact Origin and CSP requirements,
+component lifecycle, events, theme tokens, shadow parts, and host accessibility
+responsibilities. `web/examples/vanilla.html` is the package-relative reference
+integration; grants remain property-only in every example.
 
 An agent must create a new issue and implement the use case, adapter, tests, docs,
 and `.ai/contracts` status together before changing any item above to
@@ -163,6 +168,7 @@ implemented.
 | NATS event | domain outbox + NATS adapter | `.ai/contracts/events.yaml`, consumer mapping and at-least-once behavior |
 | Attachment | attachment use case + FileStorage adapter | policy, cleanup retries and signed authorization |
 | Web Component | `web/src/element.ts` | `.ai/contracts/frontend.yaml`, per-branch cursors, composer, staged media, in-place realtime, safe projection and DOM tests |
+| Host integration | `docs/frontend-integration.md` | gateway rewrite, grant property, Origin/CSP, lifecycle, tokens/parts, accessibility and vanilla example |
 
 Stable error codes are in [error-contract.md](error-contract.md). Machine-readable
 contracts under `.ai/contracts` must stay synchronized; `make validate-contracts`
