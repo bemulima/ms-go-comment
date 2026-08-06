@@ -11,6 +11,15 @@ import (
 // database-owned space/thread policy rather than environment variables.
 type Config struct {
 	HTTPPort                     string `envconfig:"HTTP_PORT" default:"8080"`
+	HTTPReadHeaderTimeoutSeconds int    `envconfig:"HTTP_READ_HEADER_TIMEOUT_SECONDS" default:"5"`
+	HTTPReadTimeoutSeconds       int    `envconfig:"HTTP_READ_TIMEOUT_SECONDS" default:"30"`
+	HTTPWriteTimeoutSeconds      int    `envconfig:"HTTP_WRITE_TIMEOUT_SECONDS" default:"75"`
+	HTTPIdleTimeoutSeconds       int    `envconfig:"HTTP_IDLE_TIMEOUT_SECONDS" default:"60"`
+	HTTPMaxHeaderBytes           int    `envconfig:"HTTP_MAX_HEADER_BYTES" default:"32768"`
+	HTTPUserRateLimitRPS         int    `envconfig:"HTTP_USER_RATE_LIMIT_RPS" default:"20"`
+	HTTPUserRateLimitBurst       int    `envconfig:"HTTP_USER_RATE_LIMIT_BURST" default:"40"`
+	HTTPUserRateLimitMaxActors   int    `envconfig:"HTTP_USER_RATE_LIMIT_MAX_ACTORS" default:"10000"`
+	HTTPUserRateLimitIdleSeconds int    `envconfig:"HTTP_USER_RATE_LIMIT_IDLE_SECONDS" default:"300"`
 	DatabaseURL                  string `envconfig:"DATABASE_URL" default:"postgres://postgres:postgres@localhost:5432/ms_comment?sslmode=disable"`
 	NATSURL                      string `envconfig:"NATS_URL" default:"nats://localhost:4222"`
 	InternalAPIToken             string `envconfig:"INTERNAL_API_TOKEN" default:"change-me"`
@@ -63,6 +72,14 @@ func (c Config) Validate() error {
 	}
 	if c.AccessGrantMaxTTLSeconds < 1 || c.AccessGrantMaxTTLSeconds > 900 {
 		return fmt.Errorf("ACCESS_GRANT_MAX_TTL_SECONDS must be between 1 and 900")
+	}
+	if c.HTTPReadHeaderTimeoutSeconds < 1 || c.HTTPReadTimeoutSeconds < 1 || c.HTTPWriteTimeoutSeconds < 1 ||
+		c.HTTPIdleTimeoutSeconds < 1 || c.HTTPMaxHeaderBytes < 4096 || c.HTTPMaxHeaderBytes > 1<<20 {
+		return fmt.Errorf("HTTP timeout values must be positive and HTTP_MAX_HEADER_BYTES must be between 4096 and 1048576")
+	}
+	if c.HTTPUserRateLimitRPS < 1 || c.HTTPUserRateLimitBurst < 1 || c.HTTPUserRateLimitMaxActors < 1 ||
+		c.HTTPUserRateLimitIdleSeconds < 1 {
+		return fmt.Errorf("HTTP user rate limit values must be positive")
 	}
 	return nil
 }

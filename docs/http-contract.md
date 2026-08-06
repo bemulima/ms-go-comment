@@ -16,6 +16,19 @@ For a `context_grant` space the same request also carries the opaque
 `X-Comment-Access-Grant`; the service matches it to that actor and exact
 space/resource tuple.
 
+All responses include a server-generated `X-Request-ID`, `Cache-Control:
+no-store`, `X-Content-Type-Options: nosniff`, and restrictive frame/content
+headers. Client-supplied request IDs are replaced. Panics are logged with that
+ID and become the stable `internal_error` JSON contract.
+
+Authenticated REST and `POST /api/v1/realtime/ticket` share a per-instance
+token bucket keyed by the verified actor UUID. Defaults are 20 requests/second,
+burst 40, maximum 10,000 actor buckets, and 300-second idle eviction. Exhaustion
+returns `429 rate_limited` plus `Retry-After: 1`. `/api/v1/ws`, `/internal/v1`,
+`/admin/v1`, and `/healthz` are not charged to this bucket; their trust and
+connection controls are separate. This bounded in-process guard complements
+gateway/distributed limits and does not coordinate quota across instances.
+
 ## Authenticated API
 
 ```http

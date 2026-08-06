@@ -20,6 +20,7 @@ func TestErrorContract(t *testing.T) {
 		{name: "internal auth", err: domain.ErrInternalAuthentication, status: http.StatusForbidden, code: "internal_authentication_failed"},
 		{name: "access", err: domain.ErrAccessRequired, status: http.StatusForbidden, code: "comment_access_required"},
 		{name: "invalid access grant", err: domain.ErrInvalidAccessGrant, status: http.StatusUnprocessableEntity, code: "invalid_access_grant"},
+		{name: "rate limit", err: domain.ErrRateLimited, status: http.StatusTooManyRequests, code: "rate_limited"},
 		{name: "thread state", err: domain.ErrThreadNotWritable, status: http.StatusConflict, code: "thread_not_writable"},
 		{name: "edit", err: domain.ErrEditConflict, status: http.StatusConflict, code: "comment_edit_conflict"},
 		{name: "parent", err: domain.ErrParentNotFound, status: http.StatusUnprocessableEntity, code: "parent_not_found"},

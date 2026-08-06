@@ -12,6 +12,7 @@ import (
 
 	filestorageadapter "github.com/bemulima/ms-go-comment/internal/adapters/filestorage"
 	httpadapter "github.com/bemulima/ms-go-comment/internal/adapters/http"
+	httpmw "github.com/bemulima/ms-go-comment/internal/adapters/http/middleware"
 	natsadapter "github.com/bemulima/ms-go-comment/internal/adapters/nats"
 	pgadapter "github.com/bemulima/ms-go-comment/internal/adapters/postgres"
 	websocketadapter "github.com/bemulima/ms-go-comment/internal/adapters/websocket"
@@ -52,6 +53,13 @@ func main() {
 	accessService := &accessuc.Service{
 		Spaces: spaces, Threads: threads, Grants: grants,
 		MaximumTTL: time.Duration(cfg.AccessGrantMaxTTLSeconds) * time.Second,
+	}
+	userRateLimiter, err := httpmw.NewActorRateLimiter(
+		cfg.HTTPUserRateLimitRPS, cfg.HTTPUserRateLimitBurst, cfg.HTTPUserRateLimitMaxActors,
+		time.Duration(cfg.HTTPUserRateLimitIdleSeconds)*time.Second,
+	)
+	if err != nil {
+		log.Fatalf("HTTP user rate limiter error: %v", err)
 	}
 	fileStorage := filestorageadapter.Client{BaseURL: cfg.FileStorageServiceBaseURL}
 	commentService := &commentuc.Service{
@@ -113,6 +121,7 @@ func main() {
 		routerDependencies.RealtimeService = realtimeService
 		routerDependencies.InternalService = accessService
 		routerDependencies.InternalToken = cfg.InternalAPIToken
+		routerDependencies.UserRateLimiter = userRateLimiter
 	}
 	if modeHasRealtime(cfg.ServiceMode) {
 		routerDependencies.WebSocketHandler = websocketHandler
@@ -121,7 +130,11 @@ func main() {
 	server := &http.Server{
 		Addr:              ":" + cfg.HTTPPort,
 		Handler:           httpadapter.NewRouter(routerDependencies),
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: time.Duration(cfg.HTTPReadHeaderTimeoutSeconds) * time.Second,
+		ReadTimeout:       time.Duration(cfg.HTTPReadTimeoutSeconds) * time.Second,
+		WriteTimeout:      time.Duration(cfg.HTTPWriteTimeoutSeconds) * time.Second,
+		IdleTimeout:       time.Duration(cfg.HTTPIdleTimeoutSeconds) * time.Second,
+		MaxHeaderBytes:    cfg.HTTPMaxHeaderBytes,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

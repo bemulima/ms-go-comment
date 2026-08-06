@@ -108,6 +108,30 @@ func TestAdminRepositoryContract(t *testing.T) {
 	}
 }
 
+func TestHTTPGuardrailContractsStaySynchronized(t *testing.T) {
+	t.Parallel()
+
+	router := read(t, "internal/adapters/http/router.go")
+	middleware := read(t, "internal/adapters/http/middleware/guardrails.go")
+	config := read(t, "internal/config/config.go")
+	httpContract := read(t, ".ai/contracts/http.yaml")
+	for _, fragment := range []string{
+		"SecurityHeaders", "RequestID", "RecoverPanics", "RateLimitActor",
+	} {
+		assertContains(t, router+middleware, fragment, "HTTP guardrail implementation")
+	}
+	for _, fragment := range []string{
+		"HTTP_USER_RATE_LIMIT_RPS", "HTTP_USER_RATE_LIMIT_MAX_ACTORS", "HTTP_MAX_HEADER_BYTES",
+	} {
+		assertContains(t, config, fragment, "HTTP guardrail configuration")
+	}
+	for _, fragment := range []string{
+		"bounded per-instance token bucket", "429 rate_limited", "server-generated X-Request-ID",
+	} {
+		assertContains(t, httpContract, fragment, "HTTP guardrail contract")
+	}
+}
+
 func read(t *testing.T, name string) string {
 	t.Helper()
 	_, source, _, ok := runtime.Caller(0)

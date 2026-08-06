@@ -55,3 +55,8 @@ Recommended first-slice defaults are: links enabled, images disabled, maximum de
 - Every durable thread mutation increments `thread.last_sequence` and stores the allocated sequence on the changed aggregate.
 - Domain state and its outbox event commit in the same PostgreSQL transaction.
 - WebSocket delivery is a low-latency projection, not the source of truth. REST reconciliation is required after gaps.
+- Authenticated REST and realtime-ticket requests pass a bounded per-instance
+  actor token bucket. Exhaustion returns `rate_limited` with `Retry-After: 1`.
+  WebSocket upgrades use their separate per-user connection bound. Gateway or
+  distributed limits remain required for coordinated multi-instance abuse
+  control.

@@ -87,6 +87,11 @@ capabilities:
       confidence: 0.98
       source_path: internal/usecase/access/service.go
       explanation: Trusted hosts mint hash-only grants bound to issuer, user, resource, permissions, and expiry; REST and realtime enforce the binding.
+    - name: http_security_guardrails
+      value: Bounded actor rate limiting, panic recovery, request IDs, security headers, and server timeouts
+      confidence: 0.98
+      source_path: internal/adapters/http/middleware/guardrails.go
+      explanation: Per-instance protection is memory-bounded and complements gateway-level multi-instance controls.
 relations:
     - name: depends_on
       value: postgres
