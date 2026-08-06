@@ -183,6 +183,30 @@ func TestWebComponentContractStaysSynchronized(t *testing.T) {
 	}
 }
 
+func TestFrontendIntegrationContractStaysSynchronized(t *testing.T) {
+	t.Parallel()
+
+	guide := read(t, "docs/frontend-integration.md")
+	example := read(t, "web/examples/vanilla.html")
+	contract := read(t, ".ai/contracts/frontend.yaml")
+	for _, fragment := range []string{
+		"accessGrant", "X-Internal-Token", "allowed_origins", "connect-src", "img-src",
+		"--ms-comment-action", "realtime-status", "ms-comment-reconciled", "no-referrer",
+	} {
+		assertContains(t, guide, fragment, "frontend integration guide")
+	}
+	for _, fragment := range []string{
+		"defineCommentThreadElement", "ms-comment-thread", "realtime", "comments.accessGrant",
+	} {
+		assertContains(t, example, fragment, "vanilla integration example")
+	}
+	for _, fragment := range []string{
+		"docs/frontend-integration.md", "web/examples/vanilla.html", "atomic live regions",
+	} {
+		assertContains(t, contract, fragment, "frontend integration agent contract")
+	}
+}
+
 func read(t *testing.T, name string) string {
 	t.Helper()
 	_, source, _, ok := runtime.Caller(0)

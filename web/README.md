@@ -99,5 +99,9 @@ stable shadow parts including `container`, `heading`, `status`, `realtime-status
 `load-more`. Native buttons, details/summary, labels, and live regions preserve
 keyboard and screen-reader semantics.
 
-Edit/delete controls and host-level integration examples remain later frontend
-slices.
+Edit/delete controls remain outside the current widget slice.
+
+The complete gateway, private-resource, CSP/Origin, lifecycle, event, theme,
+part, and accessibility contract is in
+[`docs/frontend-integration.md`](../docs/frontend-integration.md). A runnable
+package-relative example is in [`examples/vanilla.html`](examples/vanilla.html).

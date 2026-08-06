@@ -63,6 +63,8 @@ test("element loads a thread and safely renders root comments", async () => {
   assert.equal(element.shadowRoot.querySelector("img"), null);
   assert.equal(calls[0].init.headers.get("X-Comment-Access-Grant"), "private-grant");
   assert.match(element.shadowRoot.querySelector('[part="status"]').textContent, /1 comments loaded/);
+  assert.equal(element.shadowRoot.querySelector('[part="status"]').getAttribute("aria-atomic"), "true");
+  assert.equal(element.shadowRoot.querySelector('[part="composer-input"]').getAttribute("aria-describedby"), "composer-hint composer-status");
   element.remove();
 });
 
@@ -521,5 +523,6 @@ test("element reports missing integration attributes", async () => {
   document.body.append(element);
   await failed;
   assert.match(element.shadowRoot.querySelector('[part="status"]').textContent, /are required/);
+  assert.equal(element.shadowRoot.querySelector('[part="status"]').getAttribute("role"), "alert");
   element.remove();
 });
