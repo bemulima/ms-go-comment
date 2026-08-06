@@ -5,6 +5,7 @@ import (
 
 	"github.com/bemulima/ms-go-comment/internal/domain"
 	"github.com/bemulima/ms-go-comment/internal/domain/repository"
+	accessuc "github.com/bemulima/ms-go-comment/internal/usecase/access"
 	adminuc "github.com/bemulima/ms-go-comment/internal/usecase/admin"
 	commentuc "github.com/bemulima/ms-go-comment/internal/usecase/comment"
 	"github.com/google/uuid"
@@ -20,6 +21,12 @@ type AdminService interface {
 	UpdateThread(context.Context, domain.Actor, adminuc.UpdateThreadInput) (adminuc.ThreadView, error)
 	HideComment(context.Context, domain.Actor, uuid.UUID) (adminuc.ModerationView, error)
 	RestoreComment(context.Context, domain.Actor, uuid.UUID) (adminuc.ModerationView, error)
+}
+
+type InternalService interface {
+	CreateGrant(context.Context, accessuc.CreateGrantInput) (accessuc.MintedGrant, error)
+	EnsureThread(context.Context, string, domain.ResourceReference) (accessuc.ThreadView, error)
+	GetThreadByResource(context.Context, string, domain.ResourceReference) (accessuc.ThreadView, error)
 }
 
 type CommentService interface {

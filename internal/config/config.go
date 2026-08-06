@@ -27,6 +27,8 @@ type Config struct {
 	OutboxLeaseSeconds           int    `envconfig:"OUTBOX_LEASE_SECONDS" default:"30"`
 	RealtimeTicketTTLSeconds     int    `envconfig:"REALTIME_TICKET_TTL_SECONDS" default:"30"`
 	RealtimeTicketCleanupSeconds int    `envconfig:"REALTIME_TICKET_CLEANUP_SECONDS" default:"30"`
+	AccessGrantMaxTTLSeconds     int    `envconfig:"ACCESS_GRANT_MAX_TTL_SECONDS" default:"300"`
+	AccessGrantCleanupSeconds    int    `envconfig:"ACCESS_GRANT_CLEANUP_SECONDS" default:"60"`
 	WSMaxConnectionsPerUser      int    `envconfig:"WS_MAX_CONNECTIONS_PER_USER" default:"5"`
 	WSQueueSize                  int    `envconfig:"WS_QUEUE_SIZE" default:"64"`
 	WSMaxFrameBytes              int64  `envconfig:"WS_MAX_FRAME_BYTES" default:"16384"`
@@ -55,8 +57,12 @@ func (c Config) Validate() error {
 		return fmt.Errorf("REALTIME_TICKET_TTL_SECONDS must be between 1 and 30")
 	}
 	if c.OutboxWorkerIntervalMS < 1 || c.OutboxWorkerBatch < 1 || c.OutboxLeaseSeconds < 1 ||
-		c.RealtimeTicketCleanupSeconds < 1 || c.WSMaxConnectionsPerUser < 1 || c.WSQueueSize < 1 || c.WSMaxFrameBytes < 1024 {
+		c.RealtimeTicketCleanupSeconds < 1 || c.AccessGrantCleanupSeconds < 1 ||
+		c.WSMaxConnectionsPerUser < 1 || c.WSQueueSize < 1 || c.WSMaxFrameBytes < 1024 {
 		return fmt.Errorf("realtime worker and WebSocket limits must be positive")
+	}
+	if c.AccessGrantMaxTTLSeconds < 1 || c.AccessGrantMaxTTLSeconds > 900 {
+		return fmt.Errorf("ACCESS_GRANT_MAX_TTL_SECONDS must be between 1 and 900")
 	}
 	return nil
 }
