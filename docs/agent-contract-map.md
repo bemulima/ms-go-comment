@@ -1,6 +1,6 @@
 # Agent contract map
 
-This is the final navigation map for the first backend slice. Agents must use it
+This is the final navigation map for Backend v2. Agents must use it
 to locate a rule, then follow the linked source-of-truth document and code. It
 describes the current runtime, not an aspirational API.
 
@@ -19,7 +19,7 @@ The integration key is the exact, opaque tuple
 `space_key + resource_type + resource_id`. The service never owns Course,
 Lesson, Product, Article, Page, or User rows.
 
-## Implemented in backend v1
+## Implemented in Backend v2
 
 | Process | Entry point | Invariants and outcome |
 | --- | --- | --- |
@@ -44,6 +44,39 @@ Gateway-facing routes are `/api/comment/v1/*`. Student REST rewrites to
 `/api/v1/*`; the exact `/api/comment/v1/ws` route preserves Origin, upgrade, and
 subprotocol headers without bearer authentication. The admin gateway rewrite to
 `/admin/v1/*` exposes configuration administration and comment moderation.
+
+## Role and access matrix
+
+| Surface | Identity | Additional proof | Allowed operations |
+| --- | --- | --- | --- |
+| Authenticated user space | Gateway UUID + non-guest role | None | Read; write while thread open; upload while open and images allowed |
+| Private-resource space | Gateway UUID + non-guest role | Bound `X-Comment-Access-Grant` | Exact intersection of grant `read/write/upload`, thread state, and policy |
+| Admin configuration write | Gateway role `ADMIN` | None | Create/update/disable spaces; update thread status/policy |
+| Admin configuration read | `ADMIN` or `MODERATOR` | None | List/get spaces and list threads |
+| Moderation | `ADMIN` or `MODERATOR` | None | Hide/restore comments through explicit routes |
+| Internal host service | Exact `X-Internal-Token` | Trusted service network | Ensure/get private thread and mint user/resource grant |
+| WebSocket browser | Single-use `ticket.<opaque>` subprotocol | Exact allowed Origin | Read projection; typing only when ticket includes write |
+
+Request bodies never select the actor. Admin roles do not implicitly bypass
+private-resource checks on user routes, and an internal token is never accepted
+as a browser identity or WebSocket credential.
+
+## End-to-end private integration
+
+```text
+Host authorizes user/resource
+  -> POST /internal/v1/thread/ensure
+  -> POST /internal/v1/access-grant/create
+  -> browser REST with gateway identity + X-Comment-Access-Grant
+  -> POST /api/v1/realtime/ticket with the same proof
+  -> GET /api/v1/ws with comment.v1 + ticket.<opaque>
+  -> sequence gap returns browser to GET /api/v1/comment/changes
+```
+
+The host is authoritative for resource authorization. Comment is authoritative
+for grant binding, comment policy/state, attachment authorization, sequences,
+and ticket consumption. PostgreSQL is authoritative for durable state; NATS and
+WebSocket are delivery projections.
 
 ## Business rules
 
@@ -80,13 +113,18 @@ Lifecycle subjects are `comment.created`, `comment.updated`, `comment.deleted`,
 names shorten the last three to `attachment.ready`, `attachment.failed`, and
 `thread.updated`.
 
-## Deferred after backend v1
+## Deferred after Backend v2
 
 These items are not registered in the current runtime:
 
 - distributed cross-instance rate limiting beyond the implemented bounded
   per-instance REST/ticket and WebSocket connection guards;
 - production observability dashboards and multi-instance load validation.
+
+Frontend implementation, gateway route rollout, deployment-specific secret
+provisioning, dashboards, and distributed/load validation remain separate
+tasks. They must consume this map without moving business authorization into
+the browser.
 
 An agent must create a new issue and implement the use case, adapter, tests, docs,
 and `.ai/contracts` status together before changing any item above to
