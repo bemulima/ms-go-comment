@@ -12,6 +12,9 @@ Every implemented `/api/v1` route requires gateway-supplied `X-User-ID` as a
 UUID and a non-empty, non-`GUEST` `X-User-Role`. Identity fields in request JSON
 are unknown fields and are rejected. JSON bodies are limited to one MiB,
 decoded with unknown-field rejection, and must contain exactly one object.
+For a `context_grant` space the same request also carries the opaque
+`X-Comment-Access-Grant`; the service matches it to that actor and exact
+space/resource tuple.
 
 ## Authenticated API
 
@@ -186,3 +189,37 @@ GET  /internal/v1/thread/get-by-resource
 ```
 
 All internal routes require the exact configured `X-Internal-Token`. Health remains `GET /healthz` outside these groups.
+
+Internal routes are implemented and callable only on the trusted service
+network. They do not accept gateway actor headers as authorization.
+
+`POST /internal/v1/access-grant/create` accepts:
+
+```json
+{
+  "issuer": "ms-go-course",
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "space_key": "course.private",
+  "resource_type": "lesson",
+  "resource_id": "lesson-1",
+  "permissions": {"read": true, "write": true, "upload": false},
+  "expires_in_seconds": 300
+}
+```
+
+It returns `201` with `grant`, `expires_at`, and the effective permission object.
+The active space must use `access_mode=context_grant`. TTL is from one second to
+`ACCESS_GRANT_MAX_TTL_SECONDS`; every valid permission set contains `read`, and
+`upload` also requires `write`.
+
+`POST /internal/v1/thread/ensure` accepts the same `space_key`,
+`resource_type`, and `resource_id` tuple and returns the normal thread
+projection with its effective policy. It is idempotent. The lookup equivalent is:
+
+```http
+GET /internal/v1/thread/get-by-resource?space_key=course.private&resource_type=lesson&resource_id=lesson-1
+```
+
+Both thread operations work only for active `context_grant` spaces. The grant
+is presented by the browser only on `/api/v1` REST calls and realtime-ticket
+minting; it is never accepted on `/api/v1/ws`.

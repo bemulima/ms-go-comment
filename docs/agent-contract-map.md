@@ -10,7 +10,7 @@ describes the current runtime, not an aspirational API.
 | --- | --- | --- |
 | Discussion spaces, thread/resource binding, comment tree and moderation state | `ms-go-comment` | No foreign keys or synchronous resource lookup in a host database |
 | User identity and role | `ms-gateway` | REST trusts only gateway-replaced `X-User-ID` and `X-User-Role` |
-| Host-resource authorization | Host service | Authenticated mode is implemented; context grants are deferred |
+| Host-resource authorization | Host service + `ms-go-comment` grant verification | Host authorizes first; Comment enforces a short-lived user/resource grant |
 | Attachment bytes | `ms-go-filestorage` | Comment owns binding/authorization metadata and requests temporary/active/signed operations |
 | Durable realtime delivery | PostgreSQL outbox + NATS JetStream | Domain mutation and outbox insert commit atomically; delivery is at least once |
 | Browser realtime session | `ms-go-comment` WebSocket | One thread per single-use ticket; REST remains the source of truth |
@@ -36,6 +36,8 @@ Lesson, Product, Article, Page, or User rows.
 | Attachment cleanup | background worker | Idempotent activation/deletion and explicit ready/failed/deleted states |
 | Admin configuration | `/admin/v1/space/*`, `/admin/v1/thread/*` | ADMIN writes; ADMIN/MODERATOR reads; space delete is soft-disable |
 | Comment moderation | `/admin/v1/comment/hide/*`, `/admin/v1/comment/restore/*` | ADMIN/MODERATOR; idempotent transitions; redacted hide event |
+| Private-resource grant | `POST /internal/v1/access-grant/create` | Exact internal token; hash-only bounded grant tied to issuer/user/resource/permissions |
+| Trusted private thread | `/internal/v1/thread/ensure`, `/internal/v1/thread/get-by-resource` | Active `context_grant` spaces only; opaque host tuple remains the integration key |
 
 Gateway-facing routes are `/api/comment/v1/*`. Student REST rewrites to
 `/api/v1/*`; the exact `/api/comment/v1/ws` route preserves Origin, upgrade, and
@@ -69,6 +71,7 @@ Detailed rule sources are [business-rules.md](business-rules.md),
 | `comment_attachment` | FileStorage identity, binding, media evidence and retry state |
 | `comment_outbox` | Versioned durable event, finite lease, attempts and publication evidence |
 | `comment_ws_ticket` | SHA-256 ticket hash, actor/thread/permissions and short expiry |
+| `comment_access_grant` | SHA-256 grant hash, issuer/user/resource/permissions and bounded expiry |
 
 Lifecycle subjects are `comment.created`, `comment.updated`, `comment.deleted`,
 `comment.hidden`, `comment.restored`, `comment.attachment.ready`,
@@ -78,9 +81,8 @@ names shorten the last three to `attachment.ready`, `attachment.failed`, and
 
 ## Deferred after backend v1
 
-These contracts are designed but are not registered in the current router:
+These items are not registered in the current runtime:
 
-- `/internal/v1`: context access grants and trusted host-service thread lookup;
 - rate limiting beyond the implemented per-user WebSocket connection bound;
 - production observability dashboards and multi-instance load validation.
 

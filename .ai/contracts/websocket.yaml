@@ -10,6 +10,9 @@ authentication:
     maximum_ttl_seconds: 30
     access_token_in_url: forbidden
     reconnect_context: requested last_sequence is stored with the ticket and returned on atomic consumption
+    context_grant_header: X-Comment-Access-Grant is required only while minting a ticket for context_grant spaces
+    context_grant_on_handshake: forbidden; the stored single-use ticket is authoritative
+    permission_attenuation: grant permissions intersect current thread state and effective image policy
 server_events:
     durable:
         - comment.created

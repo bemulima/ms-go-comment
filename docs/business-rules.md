@@ -6,6 +6,13 @@
 - Request bodies never select the acting user.
 - `author_id` and `uploader_id` are immutable and have no foreign key to another service database.
 - Administrators and moderators may perform explicitly registered moderation actions; elevated role does not bypass route registration or target access checks implicitly.
+- In `context_grant` spaces, gateway identity is necessary but insufficient.
+  The request also needs a non-expired grant bound to that actor and exact
+  space/resource tuple.
+- Private grants always include `read`; `upload` requires `write`. Reads require
+  `read`, mutations require `write`, and new image uploads require `upload`.
+- Knowing a private resource tuple or thread UUID never grants access. Only a
+  trusted internal caller may ensure/resolve its thread and mint a grant.
 
 ## Threads and policy
 

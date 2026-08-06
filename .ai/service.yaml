@@ -51,7 +51,7 @@ capabilities:
       value: PostgreSQL schema and clean repository ports
       confidence: 0.98
       source_path: db/migrations/001_init.up.sql
-      explanation: Six service-owned tables and transport-neutral repository ports define persistence ownership.
+      explanation: Seven service-owned tables and transport-neutral repository ports define persistence ownership.
     - name: authenticated_comment_rest
       value: Thread ensure/read and comment list/get/changes/create/update/delete
       confidence: 0.98
@@ -82,6 +82,11 @@ capabilities:
       confidence: 0.98
       source_path: internal/usecase/realtime/dispatcher.go
       explanation: The dispatcher claims without holding a network transaction and records publish or retry evidence.
+    - name: private_resource_access
+      value: Internal thread resolution and short-lived browser access grants
+      confidence: 0.98
+      source_path: internal/usecase/access/service.go
+      explanation: Trusted hosts mint hash-only grants bound to issuer, user, resource, permissions, and expiry; REST and realtime enforce the binding.
 relations:
     - name: depends_on
       value: postgres

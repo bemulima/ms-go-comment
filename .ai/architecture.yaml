@@ -75,6 +75,7 @@ implemented_usecases:
     thread_and_comment: internal/usecase/comment/service.go
     attachment_lifecycle: internal/usecase/comment/attachment_service.go
     realtime_tickets: internal/usecase/realtime/ticket_service.go
+    private_resource_access: internal/usecase/access/service.go
     outbox_dispatch: internal/usecase/realtime/dispatcher.go
 external_ownership:
     - name: user_identity_and_profile
