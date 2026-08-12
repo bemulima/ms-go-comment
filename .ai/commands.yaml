@@ -1,5 +1,17 @@
 schema_version: 1
 commands:
+    - name: policy
+      run: ./scripts/check-agent-policy.sh
+      source_path: scripts/check-agent-policy.sh
+      confidence: 1
+      requires_approval: false
+      risk: verification
+    - name: format_check
+      run: test -z "$(gofmt -l $(git ls-files '*.go'))"
+      source_path: .github/workflows/ci.yml
+      confidence: 1
+      requires_approval: false
+      risk: verification
     - name: format
       run: gofmt -w cmd internal test
       source_path: Makefile
@@ -25,11 +37,23 @@ commands:
       requires_approval: false
       risk: dependency_state
     - name: test
-      run: XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go test ./...
+      run: XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go test ./... -count=1
       source_path: Taskfile.yml
       confidence: 0.98
       requires_approval: false
       risk: verification
+    - name: vet
+      run: XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go vet ./...
+      source_path: .github/workflows/ci.yml
+      confidence: 1
+      requires_approval: false
+      risk: verification
+    - name: build
+      run: XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go build -o $PWD/.cache/bin/ms-go-comment ./cmd/ms-comment-service
+      source_path: .github/workflows/ci.yml
+      confidence: 1
+      requires_approval: false
+      risk: build
     - name: lint
       run: $PWD/.cache/bin/golangci-lint run ./...
       source_path: Taskfile.yml

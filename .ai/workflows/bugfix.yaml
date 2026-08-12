@@ -1,0 +1,9 @@
+schema_version: 1
+name: bugfix
+steps:
+  - reproduce or characterize the failure and affected discussion state
+  - identify the violated ownership, authorization, lifecycle, sequence, or delivery invariant
+  - add a focused regression test including persisted or projected consequences
+  - implement the smallest compatible fix
+  - run policy, format, vet, test, build, contract, and browser checks
+  - synchronize contracts and docs when observable behavior changed

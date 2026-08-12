@@ -133,21 +133,30 @@ contracts:
     - .ai/contracts/frontend.yaml
 instructions:
     - AGENTS.md
-    - prompts/git-workflow.md
+    - .ai/rules/common.md
+    - docs/README.md
     - docs/domain-map.md
     - docs/agent-contract-map.md
 commands:
+    - policy
+    - format_check
     - format
     - dependencies
     - tidy
     - install_lint
+    - vet
     - test
+    - build
     - lint
     - validate_contracts
     - migrate_local
     - web_test
     - web_build
 workflows:
+    - .ai/workflows/bugfix.yaml
     - .ai/workflows/implement-feature.yaml
     - .ai/workflows/change-contract.yaml
+    - .ai/workflows/refactor.yaml
+    - .ai/workflows/review.yaml
+    - .ai/workflows/issue-delivery.yaml
     - .ai/workflows/test.yaml

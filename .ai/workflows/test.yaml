@@ -2,6 +2,12 @@ schema_version: 1
 name: test
 requires_approval: false
 steps:
-    - XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go test ./...
+    - ./scripts/check-agent-policy.sh
+    - test -z "$(gofmt -l $(git ls-files '*.go'))"
+    - XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go vet ./...
+    - XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go test ./... -count=1
+    - XDG_CACHE_HOME=$PWD/.cache GOCACHE=$PWD/.cache/go-build GOMODCACHE=$PWD/.cache/gomod go build -o $PWD/.cache/bin/ms-go-comment ./cmd/ms-comment-service
     - $PWD/.cache/bin/golangci-lint run ./...
     - make validate-contracts
+    - npm --prefix web test
+    - npm --prefix web run build

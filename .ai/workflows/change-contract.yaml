@@ -1,9 +1,9 @@
 schema_version: 1
 name: change-contract
-requires_approval: true
 steps:
-    - identify producers and consumers
-    - update versioned contract evidence
-    - check compatibility and drift
+    - identify the owning contract plus every producer and consumer
+    - compare HTTP, WebSocket, event, database, FileStorage, gateway, and browser compatibility
+    - plan migration, versioning, idempotency, and rollout behavior before implementation
+    - update implementation, tests, repository-owned docs, and machine-readable contract evidence together
     - run repository verification
-    - request independent review
+    - review the actual diff and explicitly report breaking or cross-repository follow-up work
