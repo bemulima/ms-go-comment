@@ -22,34 +22,44 @@ layers:
         - authorization policy orchestration
         - sequence and outbox orchestration
       dependency_rule: depends on domain ports, not concrete adapters
-    - name: http_adapter
-      source_path: internal/adapters/http
+    - name: http_api_transport
+      source_path: internal/transport/http/api
       responsibilities:
-        - route groups and middleware
+        - authenticated user route registration
         - request decoding and response mapping
         - gateway identity extraction
       dependency_rule: handlers remain thin and call use cases
-    - name: websocket_adapter
-      source_path: internal/adapters/websocket
+    - name: http_admin_transport
+      source_path: internal/transport/http/admin
+      responsibilities:
+        - role-protected configuration and moderation route registration
+      dependency_rule: handlers remain thin and call use cases
+    - name: http_private_transport
+      source_path: internal/transport/http/private
+      responsibilities:
+        - trusted service-to-service route registration
+      dependency_rule: internal token validation remains at the transport boundary
+    - name: websocket_transport
+      source_path: internal/transport/websocket
       responsibilities:
         - ticket consumption
         - connection lifecycle
         - event projection and ephemeral messages
       dependency_rule: does not implement durable comment mutations
-    - name: postgres_adapter
-      source_path: internal/adapters/postgres
+    - name: postgres_infrastructure
+      source_path: internal/infrastructure/persistence/postgres
       responsibilities:
         - pgx repositories
         - transaction manager
         - outbox claiming
-    - name: nats_adapter
-      source_path: internal/adapters/nats
+    - name: nats_infrastructure
+      source_path: internal/infrastructure/messaging/nats
       responsibilities:
         - JetStream publication
         - lifecycle subscription
         - ephemeral thread fan-out
-    - name: filestorage_adapter
-      source_path: internal/adapters/filestorage
+    - name: filestorage_infrastructure
+      source_path: internal/infrastructure/filestorage
       responsibilities:
         - staged upload
         - idempotent activation and deletion
@@ -77,12 +87,12 @@ domain_sources:
     persistence_ports: internal/domain/repository
     initial_migration: db/migrations/001_init.up.sql
 implemented_adapters:
-    http: internal/adapters/http
-    postgres: internal/adapters/postgres
-    filestorage: internal/adapters/filestorage
-    nats: internal/adapters/nats
-    websocket: internal/adapters/websocket
-    http_guardrails: internal/adapters/http/middleware/guardrails.go
+    http: internal/transport/http
+    postgres: internal/infrastructure/persistence/postgres
+    filestorage: internal/infrastructure/filestorage
+    nats: internal/infrastructure/messaging/nats
+    websocket: internal/transport/websocket
+    http_guardrails: internal/transport/http/middleware/guardrails.go
     browser_sdk: web/src
     web_component: web/src/element.ts
 implemented_usecases:

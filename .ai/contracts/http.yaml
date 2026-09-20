@@ -67,20 +67,22 @@ implemented_routes:
     - POST /internal/v1/thread/ensure
     - GET /internal/v1/thread/get-by-resource
 implementation:
-    router: internal/adapters/http/router.go
-    handlers: internal/adapters/http/handlers/comment.go
+    router: internal/transport/http/router.go
+    api_router: internal/transport/http/api/router.go
+    admin_router: internal/transport/http/admin/router.go
+    handlers: internal/transport/http/handlers/comment.go
     usecase: internal/usecase/comment/service.go
-    persistence: internal/adapters/postgres
-    attachment_handler: internal/adapters/http/handlers/attachment.go
-    filestorage_adapter: internal/adapters/filestorage/client.go
-    realtime_ticket_handler: internal/adapters/http/handlers/realtime.go
-    websocket_handler: internal/adapters/websocket/handler.go
-    admin_handler: internal/adapters/http/handlers/admin.go
+    persistence: internal/infrastructure/persistence/postgres
+    attachment_handler: internal/transport/http/handlers/attachment.go
+    filestorage_adapter: internal/infrastructure/filestorage/client.go
+    realtime_ticket_handler: internal/transport/http/handlers/realtime.go
+    websocket_handler: internal/transport/websocket/handler.go
+    admin_handler: internal/transport/http/handlers/admin.go
     admin_usecase: internal/usecase/admin/service.go
-    internal_router: internal/adapters/http/internal/router.go
-    internal_handler: internal/adapters/http/handlers/internal.go
+    internal_router: internal/transport/http/private/router.go
+    internal_handler: internal/transport/http/handlers/internal.go
     access_usecase: internal/usecase/access/service.go
-    access_repository: internal/adapters/postgres/access_grant_repository.go
+    access_repository: internal/infrastructure/persistence/postgres/access_grant_repository.go
 authentication:
     headers:
         - X-User-ID as UUID

@@ -42,7 +42,7 @@ capabilities:
     - name: http_route
       value: GET /healthz
       confidence: 0.98
-      source_path: internal/adapters/http/router.go
+      source_path: internal/transport/http/router.go
       explanation: The bootstrap router exposes the process health contract.
     - name: authenticated_discussion_tree
       value: Multi-level authenticated resource discussions
@@ -57,12 +57,12 @@ capabilities:
     - name: authenticated_comment_rest
       value: Thread ensure/read and comment list/get/changes/create/update/delete
       confidence: 0.98
-      source_path: internal/adapters/http/router.go
+      source_path: internal/transport/http/router.go
       explanation: Authenticated routes call transaction-scoped comment use cases backed by pgx repositories.
     - name: admin_configuration_rest
       value: Space lifecycle and thread policy administration
       confidence: 0.98
-      source_path: internal/adapters/http/handlers/admin.go
+      source_path: internal/transport/http/handlers/admin.go
       explanation: ADMIN owns configuration writes while ADMIN and MODERATOR may inspect spaces and threads.
     - name: comment_moderation_rest
       value: Transactional hide and restore with redacted recovery state
@@ -77,7 +77,7 @@ capabilities:
     - name: realtime_websocket
       value: Ticket-authenticated realtime WebSocket projection
       confidence: 0.98
-      source_path: internal/adapters/websocket/handler.go
+      source_path: internal/transport/websocket/handler.go
       explanation: Single-use tickets, sequence reconciliation, bounded local hub, and NATS fan-out implement the approved contract.
     - name: transactional_outbox_delivery
       value: Atomic PostgreSQL lease and JetStream publication with event ID deduplication
@@ -92,7 +92,7 @@ capabilities:
     - name: http_security_guardrails
       value: Bounded actor rate limiting, panic recovery, request IDs, security headers, and server timeouts
       confidence: 0.98
-      source_path: internal/adapters/http/middleware/guardrails.go
+      source_path: internal/transport/http/middleware/guardrails.go
       explanation: Per-instance protection is memory-bounded and complements gateway-level multi-instance controls.
     - name: headless_browser_sdk
       value: Typed REST, private grant, realtime ticket, reconnect, and sequence reconciliation client

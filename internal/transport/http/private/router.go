@@ -1,8 +1,8 @@
 package internalhttp
 
 import (
-	"github.com/bemulima/ms-go-comment/internal/adapters/http/handlers"
-	httpmw "github.com/bemulima/ms-go-comment/internal/adapters/http/middleware"
+	"github.com/bemulima/ms-go-comment/internal/transport/http/handlers"
+	httpmw "github.com/bemulima/ms-go-comment/internal/transport/http/middleware"
 	"github.com/go-chi/chi/v5"
 )
 

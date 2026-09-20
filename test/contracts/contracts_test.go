@@ -11,15 +11,17 @@ import (
 func TestImplementedHTTPRoutesStaySynchronized(t *testing.T) {
 	t.Parallel()
 
-	router := read(t, "internal/adapters/http/router.go")
+	router := read(t, "internal/transport/http/router.go")
+	apiRouter := read(t, "internal/transport/http/api/router.go")
+	adminRouter := read(t, "internal/transport/http/admin/router.go")
 	httpContract := read(t, ".ai/contracts/http.yaml")
 	registrations := []string{
 		`router.Get("/healthz"`, `api.Put("/thread/ensure"`, `api.Get("/thread/get/{threadID}"`,
 		`api.Get("/comment/list"`, `api.Get("/comment/get/{commentID}"`, `api.Get("/comment/changes"`,
 		`api.Post("/comment/create"`, `api.Put("/comment/update/{commentID}"`, `api.Delete("/comment/delete/{commentID}"`,
 		`api.Post("/comment-attachment/upload"`, `api.Get("/comment-attachment/signed-url/{attachmentID}"`,
-		`api.Delete("/comment-attachment/delete/{attachmentID}"`, `Post("/api/v1/realtime/ticket"`,
-		`router.Handle("/api/v1/ws"`,
+		`api.Delete("/comment-attachment/delete/{attachmentID}"`, `Post("/realtime/ticket"`,
+		`router.Handle("/ws"`,
 	}
 	implemented := []string{
 		"GET /healthz", "PUT /api/v1/thread/ensure", "GET /api/v1/thread/get/{threadID}",
@@ -29,7 +31,7 @@ func TestImplementedHTTPRoutesStaySynchronized(t *testing.T) {
 		"DELETE /api/v1/comment-attachment/delete/{attachmentID}", "POST /api/v1/realtime/ticket", "GET /api/v1/ws",
 	}
 	for index := range registrations {
-		assertContains(t, router, registrations[index], "router registration")
+		assertContains(t, router+apiRouter, registrations[index], "router registration")
 		assertContains(t, httpContract, implemented[index], "machine-readable implemented route")
 	}
 	assertContains(t, httpContract, "status: user_realtime_admin_and_internal_routes_implemented", "HTTP implementation status")
@@ -39,9 +41,9 @@ func TestImplementedHTTPRoutesStaySynchronized(t *testing.T) {
 		`admin.Get("/thread/list"`, `admin.Put("/thread/update/{threadID}"`,
 		`admin.Put("/comment/hide/{commentID}"`, `admin.Put("/comment/restore/{commentID}"`,
 	} {
-		assertContains(t, router, fragment, "admin router registration")
+		assertContains(t, adminRouter, fragment, "admin router registration")
 	}
-	internalRouter := read(t, "internal/adapters/http/internal/router.go")
+	internalRouter := read(t, "internal/transport/http/private/router.go")
 	assertContains(t, router, `router.Mount("/internal/v1"`, "internal router mount")
 	for _, fragment := range []string{
 		`router.Post("/access-grant/create"`, `router.Post("/thread/ensure"`, `router.Get("/thread/get-by-resource"`,
@@ -70,7 +72,7 @@ func TestRealtimeContractsStaySynchronized(t *testing.T) {
 		assertContains(t, realtimeDoc, subject, "realtime documentation")
 	}
 
-	handler := read(t, "internal/adapters/websocket/handler.go")
+	handler := read(t, "internal/transport/websocket/handler.go")
 	wsContract := read(t, ".ai/contracts/websocket.yaml")
 	for _, fragment := range []string{"access_token", "ticket", "Sec-WebSocket-Protocol", "comment.v1"} {
 		assertContains(t, handler+wsContract, fragment, "WebSocket credential contract")
@@ -94,14 +96,14 @@ func TestAgentMapNamesOwnedBoundariesAndDeferredScope(t *testing.T) {
 func TestAdminRepositoryContract(t *testing.T) {
 	t.Parallel()
 
-	repositorySource := read(t, "internal/adapters/postgres/thread_repository.go")
+	repositorySource := read(t, "internal/infrastructure/persistence/postgres/thread_repository.go")
 	for _, fragment := range []string{
 		"func (r ThreadRepository) List", "$1::uuid IS NULL OR space_id=$1",
 		"$2::smallint IS NULL OR status=$2", "ORDER BY created_at, id LIMIT $3 OFFSET $4",
 	} {
 		assertContains(t, repositorySource, fragment, "admin thread list repository")
 	}
-	commentRepository := read(t, "internal/adapters/postgres/comment_repository.go")
+	commentRepository := read(t, "internal/infrastructure/persistence/postgres/comment_repository.go")
 	for _, fragment := range []string{
 		"func (r CommentRepository) UpdateModerationStatus", "status=$1, version=$2, sequence=$3, updated_at=$4",
 		"WHERE id=$5 AND status=$6 AND version=$7", "domain.ErrModerationConflict",
@@ -113,8 +115,8 @@ func TestAdminRepositoryContract(t *testing.T) {
 func TestHTTPGuardrailContractsStaySynchronized(t *testing.T) {
 	t.Parallel()
 
-	router := read(t, "internal/adapters/http/router.go")
-	middleware := read(t, "internal/adapters/http/middleware/guardrails.go")
+	router := read(t, "internal/transport/http/router.go")
+	middleware := read(t, "internal/transport/http/middleware/guardrails.go")
 	config := read(t, "internal/config/config.go")
 	httpContract := read(t, ".ai/contracts/http.yaml")
 	for _, fragment := range []string{

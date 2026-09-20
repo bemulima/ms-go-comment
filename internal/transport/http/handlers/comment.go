@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	httpmw "github.com/bemulima/ms-go-comment/internal/adapters/http/middleware"
 	"github.com/bemulima/ms-go-comment/internal/domain"
 	"github.com/bemulima/ms-go-comment/internal/domain/repository"
+	httpmw "github.com/bemulima/ms-go-comment/internal/transport/http/middleware"
 	commentuc "github.com/bemulima/ms-go-comment/internal/usecase/comment"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"

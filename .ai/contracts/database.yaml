@@ -29,16 +29,16 @@ owned_tables:
       issue: 3
       domain_source: internal/domain/outbox.go
       delivery_issue: 6
-      repository_source: internal/adapters/postgres/outbox_repository.go
+      repository_source: internal/infrastructure/persistence/postgres/outbox_repository.go
     - name: comment_ws_ticket
       issue: 3
       domain_source: internal/domain/realtime_ticket.go
       lifecycle_issue: 6
-      repository_source: internal/adapters/postgres/realtime_ticket_repository.go
+      repository_source: internal/infrastructure/persistence/postgres/realtime_ticket_repository.go
     - name: comment_access_grant
       issue: 20
       domain_source: internal/domain/access_grant.go
-      repository_source: internal/adapters/postgres/access_grant_repository.go
+      repository_source: internal/infrastructure/persistence/postgres/access_grant_repository.go
 invariants:
     - one thread per exact space/resource tuple
     - reply parent and root belong to the same thread

@@ -38,10 +38,10 @@ recovery:
     sequence_source: comment_thread.last_sequence
     rest_endpoint: GET /api/v1/comment/changes
 implementation:
-    handler: internal/adapters/websocket/handler.go
-    hub: internal/adapters/websocket/hub.go
+    handler: internal/transport/websocket/handler.go
+    hub: internal/transport/websocket/hub.go
     ticket_usecase: internal/usecase/realtime/ticket_service.go
-    ticket_repository: internal/adapters/postgres/realtime_ticket_repository.go
+    ticket_repository: internal/infrastructure/persistence/postgres/realtime_ticket_repository.go
 limits:
     default_max_frame_bytes: 16384
     default_connections_per_user: 5

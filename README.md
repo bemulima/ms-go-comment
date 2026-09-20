@@ -24,11 +24,11 @@ private threads and mint short-lived grants; browsers present those grants as
 - `cmd/ms-comment-service`: composition root and graceful process lifecycle.
 - `internal/domain`: domain entities, invariants, events, and repository ports.
 - `internal/usecase`: transport-independent business processes.
-- `internal/adapters/http`: Chi REST adapters and gateway identity boundary.
-- `internal/adapters/websocket`: ticket-authenticated realtime transport.
-- `internal/adapters/postgres`: pgx repositories and transaction manager.
-- `internal/adapters/nats`: outbox delivery and realtime fan-out.
-- `internal/adapters/filestorage`: staged user-media lifecycle.
+- `internal/transport/http`: Chi REST transport and gateway identity boundary.
+- `internal/transport/websocket`: ticket-authenticated realtime transport.
+- `internal/infrastructure/persistence/postgres`: pgx repositories and transaction manager.
+- `internal/infrastructure/messaging/nats`: outbox delivery and realtime fan-out.
+- `internal/infrastructure/filestorage`: staged user-media lifecycle.
 - `db/migrations`: reversible PostgreSQL contracts.
 - `.ai`: machine-readable service, architecture, command, workflow, and API contracts for agents.
 - `web`: framework-agnostic TypeScript SDK plus an explicitly registered, safe realtime discussion tree and policy-aware composer Web Component.

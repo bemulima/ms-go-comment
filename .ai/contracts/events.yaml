@@ -31,12 +31,12 @@ moderation_producer_source: internal/usecase/admin/service.go
 moderation_payload:
     comment.hidden: identifiers_status_version_and_counters_only
     comment.restored: safe_content_links_and_attachment_projection
-outbox_repository: internal/adapters/postgres/outbox_repository.go
+outbox_repository: internal/infrastructure/persistence/postgres/outbox_repository.go
 attachment_lifecycle_source: internal/usecase/comment/attachment_service.go
 attachment_worker: cmd/ms-comment-service/main.go
 dispatcher: internal/usecase/realtime/dispatcher.go
-nats_publisher: internal/adapters/nats/client.go
-nats_subscriber: internal/adapters/nats/subscriber.go
+nats_publisher: internal/infrastructure/messaging/nats/client.go
+nats_subscriber: internal/infrastructure/messaging/nats/subscriber.go
 outbox_claim:
     strategy: atomic lease using next_attempt_at and FOR UPDATE SKIP LOCKED
     network_inside_transaction: false

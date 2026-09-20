@@ -90,5 +90,5 @@ index supports bounded `FOR UPDATE SKIP LOCKED` cleanup batches.
 The matching entities, value objects, validation rules, and stable errors live
 in `internal/domain`. Persistence contracts live in `internal/domain/repository`
 and expose no pgx or SQL types. Concrete pgx implementations live in
-`internal/adapters/postgres`; a context-bound transaction manager makes sequence,
+`internal/infrastructure/persistence/postgres`; a context-bound transaction manager makes sequence,
 counters, comment state, attachment binding, and outbox insertion one commit.

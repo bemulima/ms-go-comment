@@ -162,9 +162,9 @@ implemented.
 | --- | --- | --- |
 | Entity/invariant | `internal/domain` | migration, repository port, error and event contracts |
 | Business process | `internal/usecase` | transaction boundary, handler, tests and outbox payload |
-| REST shape | `internal/adapters/http` | `docs/http-contract.md`, `.ai/contracts/http.yaml`, gateway rewrite |
-| Persistence | `db/migrations` + `internal/adapters/postgres` | reversible pair and migration contract tests |
-| WebSocket | `internal/adapters/websocket` | ticket use case, Origin/subprotocol rules and reconciliation |
+| REST shape | `internal/transport/http` | `docs/http-contract.md`, `.ai/contracts/http.yaml`, gateway rewrite |
+| Persistence | `db/migrations` + `internal/infrastructure/persistence/postgres` | reversible pair and migration contract tests |
+| WebSocket | `internal/transport/websocket` | ticket use case, Origin/subprotocol rules and reconciliation |
 | NATS event | domain outbox + NATS adapter | `.ai/contracts/events.yaml`, consumer mapping and at-least-once behavior |
 | Attachment | attachment use case + FileStorage adapter | policy, cleanup retries and signed authorization |
 | Web Component | `web/src/element.ts` | `.ai/contracts/frontend.yaml`, per-branch cursors, composer, staged media, in-place realtime, safe projection and DOM tests |
