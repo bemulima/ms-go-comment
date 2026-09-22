@@ -1,0 +1,116 @@
+schema: architecture/v1
+kind: service
+id: ms-go-comment
+manifest_revision: 1
+identity: {name: ms-go-comment, kind: go_backend_service}
+purpose: {value: "Own discussion spaces, resource bindings, comment trees, moderation, attachment bindings, access grants, realtime tickets, sequences, and outbox delivery.", confidence: 1, evidence: [{source_path: .ai/service.yaml}]}
+responsibilities:
+  - value: "Expose the repository-owned HTTP and realtime interfaces while keeping delivery projections separate from durable state."
+    confidence: 1
+    evidence: [{source_path: .ai/contracts/http.yaml}]
+capabilities:
+  - value: "Serve all HTTP routes listed in the owned HTTP contract."
+    confidence: 1
+    evidence: [{source_path: .ai/contracts/http.yaml}]
+  - value: "Run the configured realtime subscriber and background work only in the corresponding service modes."
+    confidence: 1
+    evidence: [{source_path: cmd/ms-comment-service/main.go}]
+owned_resources:
+  - type: postgres
+    name: service-owned durable domain state and outbox
+    description: {value: "The repository-owned database contract defines the durable storage boundary.", confidence: 1, evidence: [{source_path: .ai/contracts/database.yaml}]}
+inbound_interfaces:
+  - transport: http
+    name: http
+    description: {value: "The HTTP contract enumerates the concrete inbound routes.", confidence: 1, evidence: [{source_path: .ai/contracts/http.yaml}]}
+  - transport: nats
+    name: realtime_projection
+    description: {value: "Concrete NATS subscriptions feed the local realtime projection.", confidence: 1, evidence: [{source_path: internal/infrastructure/messaging/nats/subscriber.go}]}
+outbound_dependencies:
+  - id: postgres-dependency
+    transport: http
+    target: postgres
+    direction: outbound
+    description: {value: "The service depends on postgres at the boundary described by its repository-owned configuration and contracts.", confidence: 1, evidence: [{source_path: .ai/service.yaml}]}
+  - id: nats-dependency
+    transport: nats
+    target: nats
+    direction: outbound
+    description: {value: "The service depends on nats at the boundary described by its repository-owned configuration and contracts.", confidence: 1, evidence: [{source_path: .ai/service.yaml}]}
+  - id: filestorage-dependency
+    transport: http
+    target: filestorage
+    direction: outbound
+    description: {value: "The service depends on filestorage at the boundary described by its repository-owned configuration and contracts.", confidence: 1, evidence: [{source_path: .ai/service.yaml}]}
+endpoint_groups:
+  - id: http-routes
+    name: HTTP routes
+    description: {value: "Concrete HTTP operations are enumerated from the owned HTTP contract.", confidence: 1, evidence: [{source_path: .ai/contracts/http.yaml}]}
+    operations: [get-healthz, put-api-v1-thread-ensure, get-api-v1-thread-get-threadid, get-api-v1-comment-list, get-api-v1-comment-get-commentid, get-api-v1-comment-changes, post-api-v1-comment-create, put-api-v1-comment-update-commentid, delete-api-v1-comment-delete-commentid, post-api-v1-comment-attachment-upload, get-api-v1-comment-attachment-signed-url-attachmentid, delete-api-v1-comment-attachment-delete-attachmentid, post-api-v1-realtime-ticket, get-api-v1-ws, post-admin-v1-space-create, get-admin-v1-space-get-spaceid, get-admin-v1-space-list, put-admin-v1-space-update-spaceid, delete-admin-v1-space-delete-spaceid, get-admin-v1-thread-list, put-admin-v1-thread-update-threadid, put-admin-v1-comment-hide-commentid, put-admin-v1-comment-restore-commentid, post-internal-v1-access-grant-create, post-internal-v1-thread-ensure, get-internal-v1-thread-get-by-resource]
+  - id: nats-subscribers
+    name: NATS subscribers
+    description: {value: "Concrete realtime subscriptions are enumerated from the subscriber implementation.", confidence: 1, evidence: [{source_path: internal/infrastructure/messaging/nats/subscriber.go}]}
+    operations: [subscribe-comment-created, subscribe-comment-updated, subscribe-comment-deleted, subscribe-comment-hidden, subscribe-comment-restored, subscribe-comment-attachment-ready, subscribe-comment-attachment-failed, subscribe-comment-thread-updated, subscribe-comment-realtime-typing-wildcard]
+  - id: background-work
+    name: Background work
+    description: {value: "Ticker-driven background operations are enumerated from the process composition.", confidence: 1, evidence: [{source_path: cmd/ms-comment-service/main.go}]}
+    operations: [worker-attachment-lifecycle, worker-outbox-dispatch, worker-realtime-ticket-cleanup, worker-access-grant-cleanup]
+produced_contracts:
+  - transport: nats
+    code: comment_lifecycle_events
+    direction: produced
+    description: {value: "Published event subjects and delivery rules are defined by the owned event or ingestion contract.", confidence: 1, evidence: [{source_path: .ai/contracts/events.yaml}]}
+consumed_contracts: []
+published_events:
+  - transport: nats
+    code: comment_lifecycle_events
+    direction: produced
+    description: {value: "The service publishes only the event contract documented by its owned event or ingestion contract.", confidence: 1, evidence: [{source_path: .ai/contracts/events.yaml}]}
+subscribed_events: []
+business_rules:
+  - value: "Concrete routes, NATS subjects, and worker triggers are recorded only where checked-in contracts or source prove them."
+    confidence: 1
+    evidence: [{source_path: .ai/contracts/http.yaml}]
+operation_manifests:
+  - endpoints/get-healthz.yaml
+  - endpoints/put-api-v1-thread-ensure.yaml
+  - endpoints/get-api-v1-thread-get-threadid.yaml
+  - endpoints/get-api-v1-comment-list.yaml
+  - endpoints/get-api-v1-comment-get-commentid.yaml
+  - endpoints/get-api-v1-comment-changes.yaml
+  - endpoints/post-api-v1-comment-create.yaml
+  - endpoints/put-api-v1-comment-update-commentid.yaml
+  - endpoints/delete-api-v1-comment-delete-commentid.yaml
+  - endpoints/post-api-v1-comment-attachment-upload.yaml
+  - endpoints/get-api-v1-comment-attachment-signed-url-attachmentid.yaml
+  - endpoints/delete-api-v1-comment-attachment-delete-attachmentid.yaml
+  - endpoints/post-api-v1-realtime-ticket.yaml
+  - endpoints/get-api-v1-ws.yaml
+  - endpoints/post-admin-v1-space-create.yaml
+  - endpoints/get-admin-v1-space-get-spaceid.yaml
+  - endpoints/get-admin-v1-space-list.yaml
+  - endpoints/put-admin-v1-space-update-spaceid.yaml
+  - endpoints/delete-admin-v1-space-delete-spaceid.yaml
+  - endpoints/get-admin-v1-thread-list.yaml
+  - endpoints/put-admin-v1-thread-update-threadid.yaml
+  - endpoints/put-admin-v1-comment-hide-commentid.yaml
+  - endpoints/put-admin-v1-comment-restore-commentid.yaml
+  - endpoints/post-internal-v1-access-grant-create.yaml
+  - endpoints/post-internal-v1-thread-ensure.yaml
+  - endpoints/get-internal-v1-thread-get-by-resource.yaml
+  - operations/subscribe-comment-created.yaml
+  - operations/subscribe-comment-updated.yaml
+  - operations/subscribe-comment-deleted.yaml
+  - operations/subscribe-comment-hidden.yaml
+  - operations/subscribe-comment-restored.yaml
+  - operations/subscribe-comment-attachment-ready.yaml
+  - operations/subscribe-comment-attachment-failed.yaml
+  - operations/subscribe-comment-thread-updated.yaml
+  - operations/subscribe-comment-realtime-typing-wildcard.yaml
+  - operations/worker-attachment-lifecycle.yaml
+  - operations/worker-outbox-dispatch.yaml
+  - operations/worker-realtime-ticket-cleanup.yaml
+  - operations/worker-access-grant-cleanup.yaml
+evidence: [{source_path: .ai/service.yaml}, {source_path: .ai/contracts/http.yaml}]
+confidence: 1
+

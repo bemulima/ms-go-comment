@@ -1,0 +1,188 @@
+%% GENERATED — READ-ONLY PRESENTATION
+%% Do not edit; source of truth is the architecture manifest.
+flowchart LR
+  svc["ms-go-comment / ms-go-comment"]
+  svcInfo["purpose: Own discussion spaces, resource bindings, comment trees, moderation, attachment bindings, access grants, realtime tickets, sequences, and outbox delivery.<br/>confidence: 1"]
+  svc --> svcInfo
+  service_responsibilities["responsibilities: Expose the repository-owned HTTP and realtime interfaces while keeping delivery projections separate from durable state."]
+  svc --> service_responsibilities
+  service_capabilities["capabilities: Serve all HTTP routes listed in the owned HTTP contract.; Run the configured realtime subscriber and background work only in the corresponding service modes."]
+  svc --> service_capabilities
+  resource_0["owned resource: postgres / service-owned durable domain state and outbox — The repository-owned database contract defines the durable storage boundary."]
+  svc --> resource_0
+  inbound_0["inbound http: http — The HTTP contract enumerates the concrete inbound routes."]
+  inbound_0 -->|inbound| svc
+  inbound_1["inbound nats: realtime_projection — Concrete NATS subscriptions feed the local realtime projection."]
+  inbound_1 -->|inbound| svc
+  outbound_0["outbound http: postgres — The service depends on postgres at the boundary described by its repository-owned configuration and contracts."]
+  svc -->|outbound| outbound_0
+  outbound_1["outbound nats: nats — The service depends on nats at the boundary described by its repository-owned configuration and contracts."]
+  svc -->|outbound| outbound_1
+  outbound_2["outbound http: filestorage — The service depends on filestorage at the boundary described by its repository-owned configuration and contracts."]
+  svc -->|outbound| outbound_2
+  endpoint_group_0["endpoint group http-routes: HTTP routes — Concrete HTTP operations are enumerated from the owned HTTP contract."]
+  svc --> endpoint_group_0
+  endpoint_group_0_op_0["operation: get-healthz"]
+  endpoint_group_0 --> endpoint_group_0_op_0
+  endpoint_group_0_op_1["operation: put-api-v1-thread-ensure"]
+  endpoint_group_0 --> endpoint_group_0_op_1
+  endpoint_group_0_op_2["operation: get-api-v1-thread-get-threadid"]
+  endpoint_group_0 --> endpoint_group_0_op_2
+  endpoint_group_0_op_3["operation: get-api-v1-comment-list"]
+  endpoint_group_0 --> endpoint_group_0_op_3
+  endpoint_group_0_op_4["operation: get-api-v1-comment-get-commentid"]
+  endpoint_group_0 --> endpoint_group_0_op_4
+  endpoint_group_0_op_5["operation: get-api-v1-comment-changes"]
+  endpoint_group_0 --> endpoint_group_0_op_5
+  endpoint_group_0_op_6["operation: post-api-v1-comment-create"]
+  endpoint_group_0 --> endpoint_group_0_op_6
+  endpoint_group_0_op_7["operation: put-api-v1-comment-update-commentid"]
+  endpoint_group_0 --> endpoint_group_0_op_7
+  endpoint_group_0_op_8["operation: delete-api-v1-comment-delete-commentid"]
+  endpoint_group_0 --> endpoint_group_0_op_8
+  endpoint_group_0_op_9["operation: post-api-v1-comment-attachment-upload"]
+  endpoint_group_0 --> endpoint_group_0_op_9
+  endpoint_group_0_op_10["operation: get-api-v1-comment-attachment-signed-url-attachmentid"]
+  endpoint_group_0 --> endpoint_group_0_op_10
+  endpoint_group_0_op_11["operation: delete-api-v1-comment-attachment-delete-attachmentid"]
+  endpoint_group_0 --> endpoint_group_0_op_11
+  endpoint_group_0_op_12["operation: post-api-v1-realtime-ticket"]
+  endpoint_group_0 --> endpoint_group_0_op_12
+  endpoint_group_0_op_13["operation: get-api-v1-ws"]
+  endpoint_group_0 --> endpoint_group_0_op_13
+  endpoint_group_0_op_14["operation: post-admin-v1-space-create"]
+  endpoint_group_0 --> endpoint_group_0_op_14
+  endpoint_group_0_op_15["operation: get-admin-v1-space-get-spaceid"]
+  endpoint_group_0 --> endpoint_group_0_op_15
+  endpoint_group_0_op_16["operation: get-admin-v1-space-list"]
+  endpoint_group_0 --> endpoint_group_0_op_16
+  endpoint_group_0_op_17["operation: put-admin-v1-space-update-spaceid"]
+  endpoint_group_0 --> endpoint_group_0_op_17
+  endpoint_group_0_op_18["operation: delete-admin-v1-space-delete-spaceid"]
+  endpoint_group_0 --> endpoint_group_0_op_18
+  endpoint_group_0_op_19["operation: get-admin-v1-thread-list"]
+  endpoint_group_0 --> endpoint_group_0_op_19
+  endpoint_group_0_op_20["operation: put-admin-v1-thread-update-threadid"]
+  endpoint_group_0 --> endpoint_group_0_op_20
+  endpoint_group_0_op_21["operation: put-admin-v1-comment-hide-commentid"]
+  endpoint_group_0 --> endpoint_group_0_op_21
+  endpoint_group_0_op_22["operation: put-admin-v1-comment-restore-commentid"]
+  endpoint_group_0 --> endpoint_group_0_op_22
+  endpoint_group_0_op_23["operation: post-internal-v1-access-grant-create"]
+  endpoint_group_0 --> endpoint_group_0_op_23
+  endpoint_group_0_op_24["operation: post-internal-v1-thread-ensure"]
+  endpoint_group_0 --> endpoint_group_0_op_24
+  endpoint_group_0_op_25["operation: get-internal-v1-thread-get-by-resource"]
+  endpoint_group_0 --> endpoint_group_0_op_25
+  endpoint_group_1["endpoint group nats-subscribers: NATS subscribers — Concrete realtime subscriptions are enumerated from the subscriber implementation."]
+  svc --> endpoint_group_1
+  endpoint_group_1_op_0["operation: subscribe-comment-created"]
+  endpoint_group_1 --> endpoint_group_1_op_0
+  endpoint_group_1_op_1["operation: subscribe-comment-updated"]
+  endpoint_group_1 --> endpoint_group_1_op_1
+  endpoint_group_1_op_2["operation: subscribe-comment-deleted"]
+  endpoint_group_1 --> endpoint_group_1_op_2
+  endpoint_group_1_op_3["operation: subscribe-comment-hidden"]
+  endpoint_group_1 --> endpoint_group_1_op_3
+  endpoint_group_1_op_4["operation: subscribe-comment-restored"]
+  endpoint_group_1 --> endpoint_group_1_op_4
+  endpoint_group_1_op_5["operation: subscribe-comment-attachment-ready"]
+  endpoint_group_1 --> endpoint_group_1_op_5
+  endpoint_group_1_op_6["operation: subscribe-comment-attachment-failed"]
+  endpoint_group_1 --> endpoint_group_1_op_6
+  endpoint_group_1_op_7["operation: subscribe-comment-thread-updated"]
+  endpoint_group_1 --> endpoint_group_1_op_7
+  endpoint_group_1_op_8["operation: subscribe-comment-realtime-typing-wildcard"]
+  endpoint_group_1 --> endpoint_group_1_op_8
+  endpoint_group_2["endpoint group background-work: Background work — Ticker-driven background operations are enumerated from the process composition."]
+  svc --> endpoint_group_2
+  endpoint_group_2_op_0["operation: worker-attachment-lifecycle"]
+  endpoint_group_2 --> endpoint_group_2_op_0
+  endpoint_group_2_op_1["operation: worker-outbox-dispatch"]
+  endpoint_group_2 --> endpoint_group_2_op_1
+  endpoint_group_2_op_2["operation: worker-realtime-ticket-cleanup"]
+  endpoint_group_2 --> endpoint_group_2_op_2
+  endpoint_group_2_op_3["operation: worker-access-grant-cleanup"]
+  endpoint_group_2 --> endpoint_group_2_op_3
+  contract_produced_0["produced contract: nats / comment_lifecycle_events / produced / Published event subjects and delivery rules are defined by the owned event or ingestion contract."]
+  svc --> contract_produced_0
+  contract_published_event_0["published event contract: nats / comment_lifecycle_events / produced / The service publishes only the event contract documented by its owned event or ingestion contract."]
+  svc --> contract_published_event_0
+  operation_0["operation: delete-admin-v1-space-delete-spaceid (http)"]
+  svc --> operation_0
+  operation_1["operation: delete-api-v1-comment-attachment-delete-attachmentid (http)"]
+  svc --> operation_1
+  operation_2["operation: delete-api-v1-comment-delete-commentid (http)"]
+  svc --> operation_2
+  operation_3["operation: get-admin-v1-space-get-spaceid (http)"]
+  svc --> operation_3
+  operation_4["operation: get-admin-v1-space-list (http)"]
+  svc --> operation_4
+  operation_5["operation: get-admin-v1-thread-list (http)"]
+  svc --> operation_5
+  operation_6["operation: get-api-v1-comment-attachment-signed-url-attachmentid (http)"]
+  svc --> operation_6
+  operation_7["operation: get-api-v1-comment-changes (http)"]
+  svc --> operation_7
+  operation_8["operation: get-api-v1-comment-get-commentid (http)"]
+  svc --> operation_8
+  operation_9["operation: get-api-v1-comment-list (http)"]
+  svc --> operation_9
+  operation_10["operation: get-api-v1-thread-get-threadid (http)"]
+  svc --> operation_10
+  operation_11["operation: get-api-v1-ws (http)"]
+  svc --> operation_11
+  operation_12["operation: get-healthz (http)"]
+  svc --> operation_12
+  operation_13["operation: get-internal-v1-thread-get-by-resource (http)"]
+  svc --> operation_13
+  operation_14["operation: post-admin-v1-space-create (http)"]
+  svc --> operation_14
+  operation_15["operation: post-api-v1-comment-attachment-upload (http)"]
+  svc --> operation_15
+  operation_16["operation: post-api-v1-comment-create (http)"]
+  svc --> operation_16
+  operation_17["operation: post-api-v1-realtime-ticket (http)"]
+  svc --> operation_17
+  operation_18["operation: post-internal-v1-access-grant-create (http)"]
+  svc --> operation_18
+  operation_19["operation: post-internal-v1-thread-ensure (http)"]
+  svc --> operation_19
+  operation_20["operation: put-admin-v1-comment-hide-commentid (http)"]
+  svc --> operation_20
+  operation_21["operation: put-admin-v1-comment-restore-commentid (http)"]
+  svc --> operation_21
+  operation_22["operation: put-admin-v1-space-update-spaceid (http)"]
+  svc --> operation_22
+  operation_23["operation: put-admin-v1-thread-update-threadid (http)"]
+  svc --> operation_23
+  operation_24["operation: put-api-v1-comment-update-commentid (http)"]
+  svc --> operation_24
+  operation_25["operation: put-api-v1-thread-ensure (http)"]
+  svc --> operation_25
+  operation_26["operation: subscribe-comment-attachment-failed (nats_event_subscriber)"]
+  svc --> operation_26
+  operation_27["operation: subscribe-comment-attachment-ready (nats_event_subscriber)"]
+  svc --> operation_27
+  operation_28["operation: subscribe-comment-created (nats_event_subscriber)"]
+  svc --> operation_28
+  operation_29["operation: subscribe-comment-deleted (nats_event_subscriber)"]
+  svc --> operation_29
+  operation_30["operation: subscribe-comment-hidden (nats_event_subscriber)"]
+  svc --> operation_30
+  operation_31["operation: subscribe-comment-realtime-typing-wildcard (nats_event_subscriber)"]
+  svc --> operation_31
+  operation_32["operation: subscribe-comment-restored (nats_event_subscriber)"]
+  svc --> operation_32
+  operation_33["operation: subscribe-comment-thread-updated (nats_event_subscriber)"]
+  svc --> operation_33
+  operation_34["operation: subscribe-comment-updated (nats_event_subscriber)"]
+  svc --> operation_34
+  operation_35["operation: worker-access-grant-cleanup (scheduled)"]
+  svc --> operation_35
+  operation_36["operation: worker-attachment-lifecycle (scheduled)"]
+  svc --> operation_36
+  operation_37["operation: worker-outbox-dispatch (scheduled)"]
+  svc --> operation_37
+  operation_38["operation: worker-realtime-ticket-cleanup (scheduled)"]
+  svc --> operation_38

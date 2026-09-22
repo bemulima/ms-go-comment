@@ -1,0 +1,28 @@
+schema: architecture/v1
+kind: operation
+id: worker-access-grant-cleanup
+manifest_revision: 1
+service_id: ms-go-comment
+type: scheduled
+identity: {transport: scheduled, scheduled: {name: "cmd/ms-comment-service/runAccessGrantCleanupWorker", schedule: "interval"}}
+access:
+  audience: {value: "service process background execution.", confidence: 1, evidence: [{source_path: cmd/ms-comment-service/main.go}]}
+  authentication: {value: "not applicable to in-process scheduled execution.", confidence: 1, evidence: [{source_path: cmd/ms-comment-service/main.go}]}
+  authorization: {value: "not applicable to in-process scheduled execution.", confidence: 1, evidence: [{source_path: cmd/ms-comment-service/main.go}]}
+  idempotency: {value: "The worker processing semantics are defined by its owned use case and persistence contract.", confidence: 1, evidence: [{source_path: cmd/ms-comment-service/main.go}]}
+trigger: {description: {value: "A ticker using the service-configured interval.", confidence: 1, evidence: [{source_path: cmd/ms-comment-service/main.go}]}}
+input: {path_params: [], query: [], headers: []}
+business_task: {value: "Execute the access-grant-cleanup background cycle.", confidence: 1, evidence: [{source_path: cmd/ms-comment-service/main.go}]}
+business_process:
+  - id: process-cycle
+    description: {value: "Invoke runAccessGrantCleanupWorker when the ticker fires until process context cancellation.", confidence: 1, evidence: [{source_path: cmd/ms-comment-service/main.go}]}
+    interactions: []
+business_rules: []
+implementation: {router: [], handler: [{source_path: cmd/ms-comment-service/main.go, symbol: runAccessGrantCleanupWorker}], use_cases: [], domain_services: [], repositories: []}
+data_access: []
+external_interactions: []
+side_effects: []
+output: {responses: [], emitted_events: []}
+errors: []
+evidence: [{source_path: cmd/ms-comment-service/main.go}]
+confidence: 1
