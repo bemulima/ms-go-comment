@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-ms_comment}
     ports:
-      - "${POSTGRES_PORT:-5443}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5443}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +15,30 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-sd", "/data"]
+    volumes:
+      - natsdata:/data
+
+  migrate:
+    image: postgres:16-alpine
+    profiles: ["migration"]
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB:-ms_comment}
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      MIGRATIONS_DIR: /migrations
+    volumes:
+      - ./db/migrations:/migrations:ro
+      - ./scripts/migrate.sh:/usr/local/bin/ms-comment-migrate:ro
+    entrypoint: ["sh", "/usr/local/bin/ms-comment-migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   ms-comment-service:
     container_name: ms-comment-service
@@ -55,15 +79,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      nats:
+        condition: service_started
     ports:
-      - "${COMMENT_PORT:-8092}:8080"
+      - "127.0.0.1:${COMMENT_PORT:-8092}:8080"
     networks:
       - default
-      - ms-net
 
 volumes:
   pgdata:
-
-networks:
-  ms-net:
-    external: true
+  natsdata:

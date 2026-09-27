@@ -10,6 +10,7 @@ import (
 // Config holds process configuration. Domain-specific settings belong to the
 // database-owned space/thread policy rather than environment variables.
 type Config struct {
+	HTTPHost                     string `envconfig:"HTTP_HOST" default:""`
 	HTTPPort                     string `envconfig:"HTTP_PORT" default:"8080"`
 	HTTPReadHeaderTimeoutSeconds int    `envconfig:"HTTP_READ_HEADER_TIMEOUT_SECONDS" default:"5"`
 	HTTPReadTimeoutSeconds       int    `envconfig:"HTTP_READ_TIMEOUT_SECONDS" default:"30"`
@@ -24,6 +25,7 @@ type Config struct {
 	NATSURL                      string `envconfig:"NATS_URL" default:"nats://localhost:4222"`
 	InternalAPIToken             string `envconfig:"INTERNAL_API_TOKEN" default:"change-me"`
 	FileStorageServiceBaseURL    string `envconfig:"FILESTORAGE_SERVICE_BASE_URL" default:"http://localhost:8088"`
+	FileStorageInternalToken     string `envconfig:"FILESTORAGE_INTERNAL_TOKEN" default:""`
 	ShutdownTimeout              int    `envconfig:"SHUTDOWN_TIMEOUT" default:"10"`
 	ServiceMode                  string `envconfig:"SERVICE_MODE" default:"all"`
 	AttachmentTTLMinutes         int    `envconfig:"ATTACHMENT_TTL_MINUTES" default:"60"`

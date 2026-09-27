@@ -23,6 +23,11 @@ tasks:
     cmds:
       - go run ./cmd/ms-comment-service
 
+  run:native:
+    desc: Run Comment natively against shared PostgreSQL, NATS, and Filestorage
+    cmds:
+      - python3 scripts/native_config.py -- go run ./cmd/ms-comment-service
+
   test:
     desc: Run unit and integration tests with repository-local caches
     cmds:
@@ -39,16 +44,23 @@ tasks:
       - make validate-contracts
 
   migrate:
-    desc: Apply ordered PostgreSQL migrations to the local Compose database
+    desc: Apply ordered PostgreSQL migrations to the standalone Docker database
     cmds:
       - make migrate
 
-  up:
-    desc: Start the local service and PostgreSQL
+  migrate:native:
+    desc: Apply ordered PostgreSQL migrations to shared native PostgreSQL
     cmds:
-      - docker compose up -d --build
+      - python3 scripts/native_config.py -- scripts/native_migrate.sh
+
+  up:
+    desc: Start standalone dependencies, migrate, then start the service
+    cmds:
+      - docker compose up -d postgres nats
+      - make migrate
+      - docker compose up -d --build ms-comment-service
 
   down:
-    desc: Stop the local stack and remove its volumes
+    desc: Stop the local stack while retaining persistent volumes
     cmds:
-      - docker compose down -v
+      - docker compose down

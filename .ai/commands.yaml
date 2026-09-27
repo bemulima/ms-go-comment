@@ -84,20 +84,32 @@ commands:
       confidence: 0.98
       requires_approval: true
       risk: database_change
+    - name: migrate_native
+      run: task migrate:native
+      source_path: Taskfile.yml
+      confidence: 0.98
+      requires_approval: true
+      risk: database_change
     - name: run_local
       run: go run ./cmd/ms-comment-service
       source_path: Taskfile.yml
       confidence: 0.95
       requires_approval: true
       risk: lifecycle
+    - name: run_native
+      run: task run:native
+      source_path: Taskfile.yml
+      confidence: 0.98
+      requires_approval: true
+      risk: lifecycle
     - name: start_local_stack
-      run: docker compose up -d --build
+      run: task up
       source_path: Taskfile.yml
       confidence: 0.95
       requires_approval: true
       risk: external_runtime
     - name: stop_local_stack
-      run: docker compose down -v
+      run: docker compose down
       source_path: Taskfile.yml
       confidence: 0.95
       requires_approval: true

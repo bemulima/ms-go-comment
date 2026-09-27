@@ -19,7 +19,7 @@ func TestClient_FileLifecycle(t *testing.T) {
 	ownerID := uuid.New()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/files/upload":
+		case r.Method == http.MethodPost && r.URL.Path == "/internal/v1/files/upload":
 			if err := r.ParseMultipartForm(1 << 20); err != nil {
 				t.Fatalf("parse multipart: %v", err)
 			}
@@ -41,16 +41,16 @@ func TestClient_FileLifecycle(t *testing.T) {
 			}
 			w.WriteHeader(http.StatusCreated)
 			_ = json.NewEncoder(w).Encode(map[string]any{"ID": fileID})
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/files/"+fileID.String()+"/activate":
+		case r.Method == http.MethodPost && r.URL.Path == "/internal/v1/files/"+fileID.String()+"/activate":
 			w.WriteHeader(http.StatusOK)
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/files/"+fileID.String()+"/signed-url":
+		case r.Method == http.MethodPost && r.URL.Path == "/internal/v1/files/"+fileID.String()+"/signed-url":
 			var payload map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&payload)
-			if payload["method"] != "GET" || payload["expires_minutes"] != float64(5) {
+			if payload["expires_minutes"] != float64(5) {
 				t.Errorf("signed request = %#v", payload)
 			}
 			_ = json.NewEncoder(w).Encode(map[string]string{"url": "https://signed.example/image"})
-		case r.Method == http.MethodDelete && r.URL.Path == "/api/v1/files/"+fileID.String():
+		case r.Method == http.MethodDelete && r.URL.Path == "/internal/v1/files/"+fileID.String():
 			w.WriteHeader(http.StatusNotFound)
 		default:
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
@@ -58,7 +58,7 @@ func TestClient_FileLifecycle(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := Client{BaseURL: server.URL, HTTPClient: server.Client()}
+	client := Client{BaseURL: server.URL, InternalToken: "test-token", HTTPClient: server.Client()}
 	stored, err := client.UploadTemporary(context.Background(), commentuc.TemporaryFileInput{
 		OwnerID: ownerID, Filename: "image.png", Data: []byte("png"), TTLMinutes: 60,
 	})

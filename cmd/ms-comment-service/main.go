@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"os/signal"
 	"sync"
@@ -61,7 +62,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("HTTP user rate limiter error: %v", err)
 	}
-	fileStorage := filestorageadapter.Client{BaseURL: cfg.FileStorageServiceBaseURL}
+	fileStorage := filestorageadapter.Client{BaseURL: cfg.FileStorageServiceBaseURL, InternalToken: cfg.FileStorageInternalToken}
 	commentService := &commentuc.Service{
 		Spaces: spaces, Threads: threads, Comments: comments, Attachments: attachments,
 		Outbox: outbox, Tx: pgadapter.TransactionManager{Pool: pool}, Files: fileStorage,
@@ -128,7 +129,7 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:              ":" + cfg.HTTPPort,
+		Addr:              listenAddress(cfg.HTTPHost, cfg.HTTPPort),
 		Handler:           httpadapter.NewRouter(routerDependencies),
 		ReadHeaderTimeout: time.Duration(cfg.HTTPReadHeaderTimeoutSeconds) * time.Second,
 		ReadTimeout:       time.Duration(cfg.HTTPReadTimeoutSeconds) * time.Second,
@@ -191,6 +192,13 @@ func main() {
 	if natsConnection != nil {
 		_ = natsConnection.Drain()
 	}
+}
+
+func listenAddress(host, port string) string {
+	if host == "" {
+		return ":" + port
+	}
+	return net.JoinHostPort(host, port)
 }
 
 func runAttachmentWorker(ctx context.Context, logger *zap.Logger, service *commentuc.Service, interval time.Duration, batch int) {

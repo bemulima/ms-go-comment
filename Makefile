@@ -1,4 +1,4 @@
-.PHONY: fmt deps tidy test lint web-test web-build validate-contracts migrate up down
+.PHONY: fmt deps tidy test lint web-test web-build validate-contracts migrate migrate-native up down
 
 fmt:
 	gofmt -w cmd internal test
@@ -29,28 +29,15 @@ validate-contracts:
 	done
 
 migrate:
-	@set -eu; \
-	has_schema=$$(docker compose exec -T postgres psql -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-ms_comment}" -tAc "SELECT to_regclass('public.comment_space') IS NOT NULL AND to_regclass('public.comment_thread') IS NOT NULL AND to_regclass('public.comment') IS NOT NULL AND to_regclass('public.comment_attachment') IS NOT NULL AND to_regclass('public.comment_outbox') IS NOT NULL AND to_regclass('public.comment_ws_ticket') IS NOT NULL;"); \
-	if [ "$$has_schema" = "t" ]; then \
-		echo "Initial comment schema already exists"; \
-	else \
-		docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-ms_comment}" < db/migrations/001_init.up.sql; \
-	fi; \
-	has_attachment_delivery=$$(docker compose exec -T postgres psql -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-ms_comment}" -tAc "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='comment_attachment' AND column_name='activation_attempts');"); \
-	if [ "$$has_attachment_delivery" = "t" ]; then \
-		echo "Attachment delivery migration already applied"; \
-	else \
-		docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-ms_comment}" < db/migrations/002_attachment_delivery.up.sql; \
-	fi; \
-	has_access_grants=$$(docker compose exec -T postgres psql -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-ms_comment}" -tAc "SELECT to_regclass('public.comment_access_grant') IS NOT NULL;"); \
-	if [ "$$has_access_grants" = "t" ]; then \
-		echo "Access grant migration already applied"; \
-	else \
-		docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-ms_comment}" < db/migrations/003_access_grants.up.sql; \
-	fi
+	docker compose --profile migration run --rm migrate
+
+migrate-native:
+	python3 scripts/native_config.py -- scripts/native_migrate.sh
 
 up:
-	docker compose up -d --build
+	docker compose up -d postgres nats
+	$(MAKE) migrate
+	docker compose up -d --build ms-comment-service
 
 down:
-	docker compose down -v
+	docker compose down

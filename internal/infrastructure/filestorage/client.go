@@ -18,8 +18,9 @@ import (
 const maxErrorBodyBytes = 64 << 10
 
 type Client struct {
-	BaseURL    string
-	HTTPClient *http.Client
+	BaseURL       string
+	InternalToken string
+	HTTPClient    *http.Client
 }
 
 func (c Client) UploadTemporary(ctx context.Context, input commentuc.TemporaryFileInput) (commentuc.StoredFile, error) {
@@ -53,6 +54,7 @@ func (c Client) UploadTemporary(ctx context.Context, input commentuc.TemporaryFi
 		return commentuc.StoredFile{}, fmt.Errorf("create upload request: %w", err)
 	}
 	request.Header.Set("Content-Type", writer.FormDataContentType())
+	c.authorize(request)
 	response, err := c.httpClient().Do(request)
 	if err != nil {
 		return commentuc.StoredFile{}, fmt.Errorf("upload temporary image: %w", err)
@@ -92,6 +94,7 @@ func (c Client) SignedGETURL(ctx context.Context, fileID uuid.UUID, expiresMinut
 		return "", fmt.Errorf("create signed URL request: %w", err)
 	}
 	request.Header.Set("Content-Type", "application/json")
+	c.authorize(request)
 	response, err := c.httpClient().Do(request)
 	if err != nil {
 		return "", fmt.Errorf("request signed URL: %w", err)
@@ -125,6 +128,7 @@ func (c Client) noBodyRequest(ctx context.Context, method, path string, success 
 	if err != nil {
 		return fmt.Errorf("create FileStorage request: %w", err)
 	}
+	c.authorize(request)
 	response, err := c.httpClient().Do(request)
 	if err != nil {
 		return fmt.Errorf("FileStorage request: %w", err)
@@ -141,10 +145,13 @@ func (c Client) apiBaseURL() (string, error) {
 	if baseURL == "" {
 		return "", fmt.Errorf("filestorage base URL is empty")
 	}
-	if !strings.HasSuffix(baseURL, "/api/v1") {
-		baseURL += "/api/v1"
+	if !strings.HasSuffix(baseURL, "/internal/v1") {
+		baseURL += "/internal/v1"
 	}
 	return baseURL, nil
+}
+func (c Client) authorize(request *http.Request) {
+	request.Header.Set("X-Internal-Token", c.InternalToken)
 }
 
 func (c Client) httpClient() *http.Client {

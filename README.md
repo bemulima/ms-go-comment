@@ -39,6 +39,8 @@ private threads and mint short-lived grants; browsers present those grants as
 task test
 task migrate
 task run
+task migrate:native
+task run:native
 task up
 make validate-contracts
 ```
@@ -54,6 +56,8 @@ buckets, and five-minute idle eviction. Configure them with
 `HTTP_USER_RATE_LIMIT_*`; gateway or distributed rate limiting remains the
 cross-instance production authority. HTTP read/write/idle timeouts and maximum
 header bytes are also configurable through `HTTP_*` environment variables.
+
+Native macOS development is documented in [native development](docs/native-development.md).
 
 ## Security boundary
 
