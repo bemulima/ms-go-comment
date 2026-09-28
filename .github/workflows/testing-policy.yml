@@ -35,9 +35,17 @@ jobs:
           mkdir -p "$GOBIN"
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
           "$GOBIN/golangci-lint" version
+          echo "$GOBIN" >> "$GITHUB_PATH"
 
       - name: Check policy bundle checksum before execution
         run: |
+          expected_linter="$GITHUB_WORKSPACE/.cache/bin/golangci-lint"
+          actual_linter="$(command -v golangci-lint || true)"
+          if [[ ! -x "$expected_linter" || "$actual_linter" != "$expected_linter" ]]; then
+            echo "Pinned linter path was not propagated (expected: $expected_linter, found: ${actual_linter:-missing})." >&2
+            exit 1
+          fi
+          echo "Pinned linter PATH PASS: $actual_linter"
           node --input-type=commonjs <<'NODE'
           const { createHash } = require('node:crypto');
           const { readFileSync } = require('node:fs');
