@@ -22,10 +22,10 @@ jobs:
         with:
           node-version: "20.19.5"
 
-      - name: Set up Go from go.mod
+      - name: Set up Go 1.24.4 for repository toolchain
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: "1.24.4"
           cache: true
 
       - name: Install repository-pinned golangci-lint

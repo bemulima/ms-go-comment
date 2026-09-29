@@ -111,7 +111,7 @@
     },
     "architecture.local": {
       "applicability": "APPLICABLE",
-      "implementation": "PARTIAL",
+      "implementation": "MISSING",
       "commands": [
         "test:architecture"
       ],
@@ -264,13 +264,8 @@
       "reason": "No owner coverage command/provider/report is configured at the audited revision."
     },
     "test:architecture": {
-      "availability": "AVAILABLE",
-      "working_directory": ".",
-      "timeout_seconds": 1800,
-      "invoke": [
-        "bash",
-        "scripts/check-agent-policy.sh"
-      ]
+      "availability": "UNAVAILABLE",
+      "reason": "No owner-maintained local architecture or import-boundary suite exists; scripts/check-agent-policy.sh checks agent-policy files and references, not architecture evidence."
     },
     "test:contract": {
       "availability": "AVAILABLE",
@@ -606,13 +601,13 @@
         "architecture.local"
       ],
       "scope": {
-        "description": "Only the mapped architecture.local command slice is excepted; no other category or command is waived.",
+        "description": "Only the architecture.local capability is excepted while no owner-maintained local architecture suite exists; no other category is waived.",
         "commands": [
           "test:architecture"
         ]
       },
       "owner": "ms-go-comment service owners",
-      "reason": "The mapped check enforces selected local boundaries, not the complete architecture contract.",
+      "reason": "No owner-maintained import or layer-boundary suite exists; the current script checks agent-policy files and references only.",
       "evidence": [
         "scripts/check-agent-policy.sh"
       ],
