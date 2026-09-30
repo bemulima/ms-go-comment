@@ -5,7 +5,20 @@ on:
     branches: [main]
   push:
     branches: [main]
+  schedule:
+    - cron: '17 2 * * *'
   workflow_dispatch:
+    inputs:
+      command:
+        description: Testing Policy tier
+        type: choice
+        required: true
+        default: verify:pr
+        options:
+          - verify:pr
+          - verify:main
+          - verify:nightly
+          - verify:release
 
 permissions:
   contents: read
@@ -19,6 +32,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node 20
@@ -73,17 +87,21 @@ jobs:
       - name: Validate testing manifest
         run: node .ai/testing/policy/policy-runner.cjs validate --repo .
 
-      - name: Run verify:fast policy baseline
+      - name: Run selected Testing Policy tier
         id: policy_run
         continue-on-error: true
         env:
           POLICY_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-        run: >-
-          node .ai/testing/policy/policy-runner.cjs verify
-          --repo .
-          --command verify:fast
-          --output-dir .
-          --run-id "$POLICY_RUN_ID"
+          POLICY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          POLICY_HEAD_SHA: ${{ github.sha }}
+          POLICY_TIER_COMMAND: ${{ github.event_name == 'schedule' && 'verify:nightly' || github.event_name == 'pull_request' && 'verify:pr' || github.event_name == 'push' && 'verify:main' || inputs.command || 'verify:pr' }}
+        shell: bash
+        run: |
+          args=(node .ai/testing/policy/policy-runner.cjs verify --repo . --command "$POLICY_TIER_COMMAND" --output-dir . --run-id "$POLICY_RUN_ID" --head "$POLICY_HEAD_SHA")
+          if [[ -n "$POLICY_BASE_SHA" ]]; then
+            args+=(--base "$POLICY_BASE_SHA")
+          fi
+          "${args[@]}"
 
       - name: Validate policy result artifacts
         id: result_validation
