@@ -25,7 +25,7 @@ validate-contracts:
 	@set -eu; \
 	for file in .ai/service.yaml .ai/architecture.yaml .ai/commands.yaml .ai/contracts/database.yaml .ai/contracts/http.yaml .ai/contracts/websocket.yaml .ai/contracts/events.yaml .ai/contracts/frontend.yaml; do \
 		test -s "$$file"; \
-		rg -q '^schema_version: 1$$' "$$file"; \
+		grep -Eq '^schema_version: 1$$' "$$file"; \
 	done
 
 migrate:
