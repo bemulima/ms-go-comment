@@ -1,0 +1,55 @@
+{
+  "schema_version": "consumer-contract-expectation.v1",
+  "consumer": {
+    "repository": "bemulima/ms-go-comment",
+    "service": "ms-go-comment",
+    "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001"
+  },
+  "provider_repository": "bemulima/ms-go-comment",
+  "provider_service": "ms-go-comment",
+  "contract_id": "ms-go-comment.event.v1",
+  "contract_path": ".ai/contracts/events.yaml",
+  "kind": "EVENT",
+  "version_semantics": "exact",
+  "expected_version": "v1",
+  "required_operations": [
+    "comment.attachment.failed",
+    "comment.attachment.ready",
+    "comment.created",
+    "comment.deleted",
+    "comment.hidden",
+    "comment.restored",
+    "comment.thread.updated",
+    "comment.updated"
+  ],
+  "source_pins": [
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "cmd/ms-comment-service/main.go",
+      "blob_sha": "22a10b5795eb826dd1c38a8979794cde05694e8c",
+      "content_sha256": "418cec4373e368515ca19f9d46d81f94f95e5d8f50fe59ed5eb77358db803bff"
+    },
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "internal/domain/outbox.go",
+      "blob_sha": "63a2eb423d1410d2742e85fcd51d8ac7adb20f0b",
+      "content_sha256": "6524a8160b03e091bdac939732f0f80c62cf999d8b25566e6c95c7307f3ef78e"
+    },
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "internal/infrastructure/messaging/nats/client.go",
+      "blob_sha": "d032c41149ac0aa575cb4e3e0c9cdf07819720f1",
+      "content_sha256": "3d170d3b011fc6662c114280463cadd39d3fe43e17906137af9db396d00bb048"
+    },
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "internal/infrastructure/messaging/nats/subscriber.go",
+      "blob_sha": "2be6eec5bd729c17c256670fb73a78fcdfdccc5d",
+      "content_sha256": "9915fb423a09aa5deba970ccc1e30a1ce944178b6e5cfbb4e9c573b7e80a12b7"
+    }
+  ]
+}

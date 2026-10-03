@@ -1,0 +1,37 @@
+{
+  "schema_version": "consumer-contract-expectation.v1",
+  "consumer": {
+    "repository": "bemulima/ms-go-comment",
+    "service": "ms-go-comment",
+    "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001"
+  },
+  "provider_repository": "bemulima/ms-go-filestorage",
+  "provider_service": "ms-go-filestorage",
+  "contract_id": "ms-go-filestorage.http.v1",
+  "contract_path": "internal/transport/http/router.go",
+  "kind": "HTTP",
+  "version_semantics": "exact",
+  "expected_version": "v1",
+  "required_operations": [
+    "DELETE /internal/v1/files/:id",
+    "POST /internal/v1/files/:id/activate",
+    "POST /internal/v1/files/:id/signed-url",
+    "POST /internal/v1/files/upload"
+  ],
+  "source_pins": [
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "cmd/ms-comment-service/main.go",
+      "blob_sha": "22a10b5795eb826dd1c38a8979794cde05694e8c",
+      "content_sha256": "418cec4373e368515ca19f9d46d81f94f95e5d8f50fe59ed5eb77358db803bff"
+    },
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "internal/infrastructure/filestorage/client.go",
+      "blob_sha": "df1cb6fb1df9fd5733b52b2065df55ccb431b85a",
+      "content_sha256": "51cae9b952c1249a5fb7aa30b98c6a975d4cfde1eb54e905d01955f044a874d9"
+    }
+  ]
+}

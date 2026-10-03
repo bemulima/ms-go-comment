@@ -1,0 +1,55 @@
+{
+  "schema_version": "provider-owner-audit.v1",
+  "provider": {
+    "repository": "bemulima/ms-go-comment",
+    "service": "ms-go-comment",
+    "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001"
+  },
+  "classification": "PROVIDER_APPLICABLE",
+  "source_pins": [
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "internal/transport/http/admin/router.go",
+      "blob_sha": "28beb5efc2dd5582643c9465e983fb0fd6d578b2",
+      "content_sha256": "f4ebf7582e284736c75aefa2b1ddf7193296748454318e28bba206e3238b3ff9"
+    },
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "internal/transport/http/api/router.go",
+      "blob_sha": "644f7dc980b8a15ea2b33d17a9d66a0865fc3b5e",
+      "content_sha256": "6b63877225dc05e975a531968b6776907cceca5ca8fb974c6993ada5f74cc392"
+    },
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "internal/transport/http/private/router.go",
+      "blob_sha": "8daf72059b66c4b0862d0ef6afa2ba0b44e07dc4",
+      "content_sha256": "9729aed496aab1ddd204638b26ac6cc914ecbf8c6fe6f340096288c0588a9c33"
+    },
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "internal/transport/http/router.go",
+      "blob_sha": "9f936f025958be4a7ca06c780c95120a9c0f01d5",
+      "content_sha256": "911622bb9acb78361a00fd8a6bd82aaaf5dbb17eba32d1011e5251cb2722950b"
+    },
+    {
+      "repository": "bemulima/ms-go-comment",
+      "commit_sha": "1cd4d50b916fba8e0c9bdc9e883c988f241d7001",
+      "path": "internal/domain/outbox.go",
+      "blob_sha": "63a2eb423d1410d2742e85fcd51d8ac7adb20f0b",
+      "content_sha256": "6524a8160b03e091bdac939732f0f80c62cf999d8b25566e6c95c7307f3ef78e"
+    }
+  ],
+  "reason": "Authoritative production routes and emitted event code expose platform interfaces.",
+  "inspected_paths": [
+    "internal/transport/http/admin/router.go",
+    "internal/transport/http/api/router.go",
+    "internal/transport/http/private/router.go",
+    "internal/transport/http/router.go",
+    "internal/domain/outbox.go"
+  ],
+  "contract_set_path": ".ai/contracts/provider-contract-set.v1.json"
+}
