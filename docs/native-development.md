@@ -54,8 +54,8 @@ the same ordered SQL files as Docker Compose; only the connection endpoint
 differs. The runner only applies a migration when its corresponding schema
 state is absent. It does not drop, truncate, reset, or recreate a database.
 
-Comment requires PostgreSQL and NATS at startup. In `all` mode it creates or
-uses the `COMMENT_EVENTS` JetStream stream, publishes and subscribes to the
+Comment requires PostgreSQL and NATS at startup. In `all` mode it validates the
+infrastructure-provisioned `COMMENT_EVENTS` JetStream stream, then publishes and subscribes to the
 versioned `comment.*` lifecycle subjects, and uses Core NATS for
 `comment.realtime.typing.<thread_uuid>`. FileStorage is a runtime HTTP
 dependency for attachment operations; its native endpoint is supplied by the
@@ -68,7 +68,15 @@ persistent state.
 
 ## Standalone Docker path
 
-The service-local Docker path remains self-contained for PostgreSQL and NATS:
+The service-local Docker path provides isolated PostgreSQL and NATS resources.
+Before starting Comment workers, provision that broker with the canonical
+`learning-platform-infrastructure/assets/nats/streams/comment-events.json` and
+infrastructure bootstrap. A missing stream fails startup; the application
+never provisions broker configuration. The bootstrap runs on the same Compose
+network against `nats://nats:4222`, with the canonical assets mounted read-only.
+Native startup uses the shared infrastructure bootstrap prerequisite instead.
+
+After provisioning and migrations, the ordinary application lifecycle is:
 
 ```sh
 task up
@@ -77,7 +85,8 @@ task down
 ```
 
 `task up` starts PostgreSQL and NATS, applies migrations, and then starts
-Comment so workers never begin against an empty schema.
+Comment. It requires the preceding stream provisioning prerequisite; workers
+fail closed against an unprovisioned broker or an empty database schema.
 `docker-compose.yml` keeps its own PostgreSQL `pgdata` volume and now provides
 an internal JetStream-enabled NATS service with a service-specific `natsdata`
 volume. Its host mappings are loopback-only. `task down` stops containers

@@ -1,6 +1,18 @@
 schema_version: 1
 status: implemented
 source_of_truth: docs/realtime-delivery.md
+provisioning:
+    stream: COMMENT_EVENTS
+    owner: learning-platform-infrastructure
+    startup: read_only_configuration_validation
+    prerequisite: canonical_infrastructure_bootstrap_before_worker_start
+    compatible_requirements:
+        storage: file
+        retention: limits
+        minimum_max_age_days: 7
+        unlimited_age_allowed: true
+        minimum_duplicate_window_minutes: 10
+        subjects: exact_lifecycle_subjects_without_ephemeral_or_wildcard_capture
 delivery:
     durable_transport: NATS JetStream
     persistence_boundary: PostgreSQL transactional outbox

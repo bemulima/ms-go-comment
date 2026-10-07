@@ -1,5 +1,19 @@
 # Realtime delivery
 
+## Stream deployment ownership
+
+`learning-platform-infrastructure` owns the canonical `COMMENT_EVENTS` stream
+and bootstrap. Comment's `all`/`worker` startup only inspects the provisioned
+stream. It requires file storage, limits retention, all eight exact lifecycle
+subjects, at least seven days retention (or unlimited age) and at least ten
+minutes deduplication. Wildcard and ephemeral realtime subjects fail startup.
+Missing or incompatible configuration must be repaired through infrastructure;
+an application restart never creates, updates, deletes or recreates a stream.
+Infrastructure checks the complete deployment configuration. Comment retains
+ownership of payloads, transactional outbox/inbox behavior and retries.
+Standalone/test brokers must also be explicitly provisioned before workers
+start using the infrastructure-owned canonical manifest and bootstrap.
+
 ## Durable flow
 
 Every durable mutation allocates a monotonic sequence inside its thread transaction and inserts a versioned outbox event in the same commit. A worker claims unpublished events, publishes them to NATS JetStream with `event_id` deduplication, and records success. Failures use bounded exponential backoff and remain inspectable.

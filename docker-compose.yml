@@ -16,12 +16,6 @@ services:
       timeout: 3s
       retries: 15
 
-  nats:
-    image: nats:2.10-alpine
-    command: ["-js", "-sd", "/data"]
-    volumes:
-      - natsdata:/data
-
   migrate:
     image: postgres:16-alpine
     profiles: ["migration"]
@@ -79,13 +73,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      nats:
-        condition: service_started
     ports:
       - "127.0.0.1:${COMMENT_PORT:-8092}:8080"
     networks:
       - default
+      - ms-net
 
 volumes:
   pgdata:
-  natsdata:
+
+networks:
+  ms-net:
+    external: true
+    name: ms-net
